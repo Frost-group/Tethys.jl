@@ -1,5 +1,5 @@
 module Tethys
 
-greet() = print("Hello World!")
+greet() = print("Hello Polarons!")
 
 end # module
