@@ -1,0 +1,13 @@
+name = "Tethys"
+uuid = "b72da442-09de-412e-b5ad-25e65360be4a"
+authors = ["Jarvist Moore Frost <jarvist@gmail.com>"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
