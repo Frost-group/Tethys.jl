@@ -1,4 +1,4 @@
-# Tethys
+# Tethys <img src="img/Tethys.svg" width=300 align=right>
 
 [![Build Status](https://travis-ci.org/jarvist/Tethys.jl.svg?branch=master)](https://travis-ci.org/jarvist/Tethys.jl)
 [![Coverage Status](https://coveralls.io/repos/jarvist/Tethys.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/jarvist/Tethys.jl?branch=master)
