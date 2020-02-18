@@ -1,8 +1,11 @@
 # Starting with §3, a minimalist bare expansion for the Green function of the Frohlich polaron
 # [1] Greitemann, J.; Pollet, L. Lecture Notes on Diagrammatic Monte Carlo for the Fröhlich Polaron. SciPost Phys. Lect. Notes 2018, 2. https://doi.org/10.21468/SciPostPhysLectNotes.2.
+using Random
 
 const MAX_ORDER=2
-const α=1.5
+# See [1] 3.6 p.17 'Results'
+const α=1.0
+const μ=-1.2  # chemical potential is the bane of my life
 
 struct Diag
     p # external momentum
@@ -10,7 +13,8 @@ struct Diag
 
     O::Int # Order, integer
 
-    phonon::SMatrix{MAX_ORDER, 3, Float64}
+    phonon::MMatrix{MAX_ORDER, 3, Float64}
+    move::MMatrix{MAX_ORDER, 3, Float64} # to hold move jumps
 end
 
 
@@ -49,7 +53,6 @@ function BareExpansion(d::Diag)
 	# Is this all there is?
 end
 
-const μ=0 # chemical potential is the bane of my life
 const m=1
 function logG0(p,Δτ)
     println("Bare electron propagator, p= $(p) Δτ= $(Δτ)")
@@ -60,5 +63,26 @@ const ωph=1
 function logD̃(q,Δτ)
     println("Bare Phonon propagator, q= $(q) Δτ= $(Δτ)")
     -ωph * Δτ
+end
+
+function Monte!(d::Diag)
+# Do you grow?
+    GF0=BareExpansion(d)
+
+    randn!(d.move)
+
+    println("Moves: $(d.move)")
+    d.phonon .+= d.move
+
+    GF1=BareExpansion(d)
+    println("GF0: $(GF0) GF1: $(GF1)")
+
+    if abs(GF1/GF0) > rand()
+        println("Accept?!")
+        # log GW to histogram I guess...
+    else
+        println("Reject!")
+        d.phonon .-=  d.move  # delete our effects
+    end
 end
 
