@@ -36,19 +36,6 @@ function BareExpansion(d::Diag)
         logG0tot+=logG0(p,Δτ)
     end
 
-# God, what was I thinking of?
-#for emit in d.phonon[]
-#        deltas=emit[1],-emit[3]
-#
-#    emit=sortperm(d.phonon[1,:])
-#    emitdeltas=[ [d.phonon[i,1],-d.phonon[i,3]] for i in emit]
-#    
-#    absorb=sortperm(d.phonon[2,:])
-#    absorbdeltas=[ [d.phonons[i,2], +d.phonon[i,3]] for i in absorb]
-#
-#    deltas=sort(emitdeltas+absorbdeltas)
-
-
     GF=- α^d.O * 
     exp(logG0tot + sum(logD̃.(d.phonon[:,3], d.phonon[:,2] .- d.phonon[:,1])))
 	# Is this all there is?
@@ -65,10 +52,4 @@ const ωph=1
 function logD̃(q,Δτ)
     -ωph * Δτ
 end
-
-### tests
-
-#diag=Diag(0,1.0,MAX_ORDER,[0.1,0.2,1.0 , 0.3,0.4,1.0])
-
-#println("Splish splash: ♓",diag,BareExpansion(diag))
 
