@@ -1,6 +1,7 @@
 module Tethys
 
 using StaticArrays # Gotta go quick
+using Printf
 
 println("Loading Tethys...")
 

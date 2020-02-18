@@ -18,7 +18,7 @@ struct Diag
 end
 
 
-function BareExpansion(d::Diag)
+function BareExpansion(d::Diag; verbose=false)
 # See (24) page 12 in [1], Trying to be as close to the maths as possible.
     
     # need to sort these in time in order to be able to calculate electron
@@ -41,7 +41,9 @@ function BareExpansion(d::Diag)
     t=0
     for i in timesorted
         ph=deltas[i]
-        println("At time $(ph[1]), phonon momentum exchange $(ph[2])")
+        if verbose
+            println("At time $(ph[1]), phonon momentum exchange $(ph[2])")
+        end
         Δτ=ph[1]-t
         t=ph[1]
         p=p+ph[2]
@@ -55,13 +57,13 @@ end
 
 const m=1
 function logG0(p,Δτ)
-    println("Bare electron propagator, p= $(p) Δτ= $(Δτ)")
+#    println("Bare electron propagator, p= $(p) Δτ= $(Δτ)")
     -(p^2/2m-μ)*Δτ
 end
 
 const ωph=1
 function logD̃(q,Δτ)
-    println("Bare Phonon propagator, q= $(q) Δτ= $(Δτ)")
+#    println("Bare Phonon propagator, q= $(q) Δτ= $(Δτ)")
     -ωph * Δτ
 end
 
@@ -70,19 +72,25 @@ function Monte!(d::Diag)
     GF0=BareExpansion(d)
 
     randn!(d.move)
+    d.move ./= 100
 
     println("Moves: $(d.move)")
     d.phonon .+= d.move
 
     GF1=BareExpansion(d)
-    println("GF0: $(GF0) GF1: $(GF1)")
+    r=GF1/GF0
 
-    if abs(GF1/GF0) > rand()
+    println("GF0: $(GF0) GF1: $(GF1) r: $(r)")
+
+    if r > rand()
         println("Accept?!")
         # log GW to histogram I guess...
+        return GF1
     else
         println("Reject!")
         d.phonon .-=  d.move  # delete our effects
+        return GF0
     end
+
 end
 
