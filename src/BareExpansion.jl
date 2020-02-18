@@ -77,6 +77,15 @@ function Monte!(d::Diag)
     println("Moves: $(d.move)")
     d.phonon .+= d.move
 
+    # Brutal: checks to see whether *ANY* polaron value has gone negative
+    # This is dumb as it also works on the polaron momentum
+    if count(x->x<0, d.phonon)>0
+        println("Phonons: ",d.phonon)
+        println("Failed sanity test (time gone negative)")
+        d.phonon .-= d.move
+        return GF0
+    end
+
     GF1=BareExpansion(d)
     r=GF1/GF0
 
