@@ -4,7 +4,7 @@ using StaticArrays # Gotta go quick
 
 println("Loading Tethys...")
 
-greet() = print("Hello Polarons!")
+greet() = println("Hello Polarons! ♓")
 
 include("BareExpansion.jl")
 
