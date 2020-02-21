@@ -5,7 +5,7 @@ using Random
 const MAX_ORDER=2
 # See [1] 3.6 p.17 'Results'
 const α=1.0
-const μ=-1.2  # chemical potential is the bane of my life
+const μ=-0.0  # chemical potential is the bane of my life
 
 struct Diag
     p # external momentum
@@ -32,27 +32,27 @@ function BareExpansion(d::Diag; verbose=false)
     
     # locate all el/ph interactions, and store the momentum exchange at this
     # point 
-    deltas=vcat( [[p[1],p[3]] for p in eachrow(d.phonon)], [[p[2],-p[3]] for p in eachrow(d.phonon)])
+    deltas=vcat( [[p[1],-p[3]] for p in eachrow(d.phonon)], [[p[2],+p[3]] for p in eachrow(d.phonon)])
     # time order the operators, so you can keep track of momentum
     timesorted=sortperm(deltas)
 
-    logG0tot=0
+    logG0tot=0.0
     p=d.p
-    t=0
+    t=0.0
     for i in timesorted
         ph=deltas[i]
         if verbose
             println("At time $(ph[1]), phonon momentum exchange $(ph[2])")
         end
         Δτ=ph[1]-t
+        logG0tot+=logG0(p,Δτ)
         t=ph[1]
         p=p+ph[2]
-        logG0tot+=logG0(p,Δτ)
     end
     # I don't know why, but this extra line cayses MC to diverge to -ve Inf
     # I'm certain there are off-by-one bugs in the above about line-up of sim
     # time with the phonon diagrams. But I am done for the day!
-    #logG0tot+=logG0(p,d.τ-t) # last bare electron prop to end of sim time
+    logG0tot+=logG0(p,d.τ-t) # last bare electron prop to end of sim time
 
     GF=- α^d.O * 
     exp(logG0tot + sum(logD̃.(d.phonon[:,3], d.phonon[:,2] .- d.phonon[:,1])))
@@ -75,8 +75,8 @@ function Monte!(d::Diag;  verbose=false)
 # Do you grow?
     GF0=BareExpansion(d)
 
-    randn!(d.move)
-    d.move ./= 100
+    randn!(d.move) # change all t,p by a random Gaussian amount
+    d.move ./= 100 #  but not too much
 
     if verbose println("Moves: $(d.move)") end
     d.phonon .+= d.move
