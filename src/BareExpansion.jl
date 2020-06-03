@@ -1,11 +1,13 @@
 # Starting with §3, a minimalist bare expansion for the Green function of the Frohlich polaron
-# [1] Greitemann, J.; Pollet, L. Lecture Notes on Diagrammatic Monte Carlo for the Fröhlich Polaron. SciPost Phys. Lect. Notes 2018, 2. https://doi.org/10.21468/SciPostPhysLectNotes.2.
+# [1] Greitemann, J.; Pollet, L. Lecture Notes on Diagrammatic Monte Carlo for the Fröhlich Polaron. 
+# SciPost Phys. Lect. Notes 2018, 2. 
+# https://doi.org/10.21468/SciPostPhysLectNotes.2
 using Random
 
 const MAX_ORDER=2
 # See [1] 3.6 p.17 'Results'
 const α=1.0
-const μ=-0.0  # chemical potential is the bane of my life
+const μ=-1.2  # chemical potential is the bane of my life
 
 struct Diag
     p # external momentum
@@ -71,6 +73,22 @@ function logD̃(q,Δτ)
     -ωph * Δτ
 end
 
+function physicaldiagram(d::Diag)
+    for phonon in eachrow(d.phonon)
+        if phonon[1]<0 || phonon[2]<0
+            return false
+        end
+        if phonon[1]>phonon[2] # phonon legs wrong way
+            return false
+        end
+        if phonon[2] > d.τ # beyond end of time
+            return false
+        end
+    end
+
+    return true
+end
+
 function Monte!(d::Diag;  verbose=false)
 # Do you grow?
     GF0=BareExpansion(d)
@@ -81,12 +99,10 @@ function Monte!(d::Diag;  verbose=false)
     if verbose println("Moves: $(d.move)") end
     d.phonon .+= d.move
 
-    # Brutal: checks to see whether *ANY* polaron value has gone negative
-    # This is dumb as it also works on the polaron momentum
-    if count(x->x<0, d.phonon)>0
-        if verbose println(d.phonon, "Failed sanity test (time gone negative)") end
-        d.phonon .-= d.move
-        return GF0
+    # check whether physical 
+    if physicaldiagram(d)==false
+        d.phonon .-= d.move # undo our move
+        return GF0 # return original GF ?
     end
 
     GF1=BareExpansion(d)
