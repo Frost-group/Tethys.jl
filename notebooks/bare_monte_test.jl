@@ -1,39 +1,37 @@
 ### A Pluto.jl notebook ###
-# v0.9.2
+# v0.11.3
 
 using Markdown
+using InteractiveUtils
 
 # ╔═╡ b6e035fc-a5a9-11ea-04b4-f9c64fe7219d
 begin
 	using Plots
+	gr(format=:png, size=(800,600)) # Force raster / PNG, as otherwise millions of data points get sent to web browser ^_^
+	
 	using StatsPlots
 end
 
 # ╔═╡ 6d6a567a-a593-11ea-2070-53d683c984d6
 # boot local version, under Revise
 begin
+	import Pkg; Pkg.add("Revise")
 	using Revise
 	using Pkg
-	Pkg.activate("/Users/jarvist/REPOS/Tethys.jl/") # ugly full path...
+	Pkg.activate("/home/jarvist/REPOS/Tethys.jl/") # ugly full path...
 	using Tethys
 	
 end
 
+# ╔═╡ 89a4e2a6-d7eb-11ea-3b22-fb24e94f2aa9
+using BenchmarkTools
+
 # ╔═╡ 9a8c77a0-a593-11ea-09e0-5177021a936e
 begin
-	MAX_ORDER=2
+	MAX_ORDER=3
 	diag1=Tethys.Diag(0,1.0,MAX_ORDER,[0.1,0.2,1.0 , 0.3,0.4,1.0], [0.0,0.0,0.0,0.0,0.0,0.0])
 	GF1=Tethys.BareExpansion(diag1)
 end
-
-# ╔═╡ fa04d3d6-a5ab-11ea-1be2-fb7c20cdeb52
-
-
-# ╔═╡ 32209058-a5ab-11ea-0306-5d121ab3c45b
-
-
-# ╔═╡ 2399f97a-a5ab-11ea-11cc-0934ede99f55
-
 
 # ╔═╡ 6c3748a8-a5a7-11ea-2490-d5e6dce272a8
 diag1
@@ -70,29 +68,20 @@ diag
 Tethys.BareExpansion(diag)
 
 # ╔═╡ b9e77af0-a5a7-11ea-3af8-5bd668015649
-if (1==2)==false
-	a=2
+begin
+	Pkg.add("BenchmarkTools")
 end
 
-# ╔═╡ e74ffc6a-a5a7-11ea-02a9-7373c4c62c17
+# ╔═╡ a93ba57a-d7eb-11ea-26c8-1180ccb530d5
+@benchmark Tethys.Monte!(diag1)
 
-
-# ╔═╡ c61425d0-a5a7-11ea-0268-f51f1440167e
-
-
-# ╔═╡ c2d4a91c-a5a7-11ea-2630-db855e65d7bf
-
-
-# ╔═╡ c0859b30-a5a7-11ea-0634-c98eb52c37e8
-
+# ╔═╡ 4bd42778-d7ec-11ea-095b-8f80fca95014
+@benchmark Tethys.BareExpansion(diag)
 
 # ╔═╡ Cell order:
 # ╠═b6e035fc-a5a9-11ea-04b4-f9c64fe7219d
 # ╠═6d6a567a-a593-11ea-2070-53d683c984d6
 # ╠═9a8c77a0-a593-11ea-09e0-5177021a936e
-# ╠═fa04d3d6-a5ab-11ea-1be2-fb7c20cdeb52
-# ╠═32209058-a5ab-11ea-0306-5d121ab3c45b
-# ╠═2399f97a-a5ab-11ea-11cc-0934ede99f55
 # ╠═6c3748a8-a5a7-11ea-2490-d5e6dce272a8
 # ╠═ddcd5f98-a593-11ea-1b0f-6f6067269fc4
 # ╠═69b81526-a5a7-11ea-272f-21121dbbfbb9
@@ -103,7 +92,6 @@ end
 # ╠═d08f9624-a599-11ea-3af6-5f6dc915480f
 # ╠═d16e91d0-a599-11ea-23f1-1963e0d078bb
 # ╠═b9e77af0-a5a7-11ea-3af8-5bd668015649
-# ╠═e74ffc6a-a5a7-11ea-02a9-7373c4c62c17
-# ╠═c61425d0-a5a7-11ea-0268-f51f1440167e
-# ╠═c2d4a91c-a5a7-11ea-2630-db855e65d7bf
-# ╠═c0859b30-a5a7-11ea-0634-c98eb52c37e8
+# ╠═89a4e2a6-d7eb-11ea-3b22-fb24e94f2aa9
+# ╠═a93ba57a-d7eb-11ea-26c8-1180ccb530d5
+# ╠═4bd42778-d7ec-11ea-095b-8f80fca95014

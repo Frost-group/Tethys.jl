@@ -51,9 +51,6 @@ function BareExpansion(d::Diag; verbose=false)
         t=ph[1]
         p=p+ph[2]
     end
-    # I don't know why, but this extra line cayses MC to diverge to -ve Inf
-    # I'm certain there are off-by-one bugs in the above about line-up of sim
-    # time with the phonon diagrams. But I am done for the day!
     logG0tot+=logG0(p,d.τ-t) # last bare electron prop to end of sim time
 
     GF=- α^d.O * 
