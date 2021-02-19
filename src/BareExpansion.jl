@@ -70,7 +70,7 @@ function logD̃(q,Δτ)
     -ωph * Δτ
 end
 
-function physicaldiagram(d::Diag)
+function diagramisphysical(d::Diag)
     for phonon in eachrow(d.phonon)
         if phonon[1]<0 || phonon[2]<0
             return false
@@ -97,7 +97,7 @@ function Monte!(d::Diag;  verbose=false)
     d.phonon .+= d.move
 
     # check whether physical 
-    if physicaldiagram(d)==false
+    if diagramisphysical(d)==false
         d.phonon .-= d.move # undo our move
         return GF0 # return original GF ?
     end
