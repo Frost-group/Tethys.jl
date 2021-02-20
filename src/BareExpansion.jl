@@ -6,8 +6,12 @@ using Random
 
 const MAX_ORDER=2
 # See [1] 3.6 p.17 'Results'
-const α=1.0
-const μ=-1.2  # chemical potential is the bane of my life
+
+struct FrohlichHamiltonian
+    α
+    μ
+end
+FrohlichHamiltonian() = FrohlichHamiltonian(1.0, -1.2) # chemical potential is the bane of my life
 
 struct Diag
     p # external momentum
@@ -20,7 +24,7 @@ struct Diag
 end
 
 
-function BareExpansion(d::Diag; verbose=false)
+function BareExpansion(d::Diag, H::FrohlichHamiltonian;  verbose=false)
 # See (24) page 12 in [1], Trying to be as close to the maths as possible.
     
     # need to sort these in time in order to be able to calculate electron
@@ -47,21 +51,21 @@ function BareExpansion(d::Diag; verbose=false)
             println("At time $(ph[1]), phonon momentum exchange $(ph[2])")
         end
         Δτ=ph[1]-t
-        logG0tot+=logG0(p,Δτ)
+        logG0tot+=logG0(p,Δτ,H)
         t=ph[1]
         p=p+ph[2]
     end
-    logG0tot+=logG0(p,d.τ-t) # last bare electron prop to end of sim time
+    logG0tot+=logG0(p,d.τ-t,H) # last bare electron prop to end of sim time
 
-    GF=- α^d.O * 
+    GF=- H.α^d.O * 
     exp(logG0tot + sum(logD̃.(d.phonon[:,3], d.phonon[:,2] .- d.phonon[:,1])))
 	# Is this all there is?
 end
 
 const m=1
-function logG0(p,Δτ)
+function logG0(p, Δτ, H::FrohlichHamiltonian)
 #    println("Bare electron propagator, p= $(p) Δτ= $(Δτ)")
-    -(p^2/2m-μ)*Δτ
+    -(p^2/2m-H.μ)*Δτ
 end
 
 const ωph=1
@@ -86,9 +90,9 @@ function diagramisphysical(d::Diag)
     return true
 end
 
-function Monte!(d::Diag;  verbose=false)
+function Monte!(d::Diag, H::FrohlichHamiltonian;  verbose=false)
 # Do you grow?
-    GF0=BareExpansion(d)
+    GF0=BareExpansion(d, H)
 
     randn!(d.move) # change all t,p by a random Gaussian amount
     d.move ./= 100 #  but not too much
@@ -102,7 +106,7 @@ function Monte!(d::Diag;  verbose=false)
         return GF0 # return original GF ?
     end
 
-    GF1=BareExpansion(d)
+    GF1=BareExpansion(d, H)
     r=GF1/GF0
 
     if verbose println("GF0: $(GF0) GF1: $(GF1) r: $(r)") end
