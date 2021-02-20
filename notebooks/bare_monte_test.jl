@@ -26,11 +26,11 @@ end
 using BenchmarkTools
 
 # ╔═╡ 141e94f8-7362-11eb-3606-6360ade0fefc
-H=Tethys.FrohlichHamiltonian(1.0, -1.3)
+H=Tethys.FrohlichHamiltonian(α=5.0, μ=-6)
 
 # ╔═╡ 9a8c77a0-a593-11ea-09e0-5177021a936e
 begin
-	MAX_ORDER=3
+	MAX_ORDER=2
 	diag1=Tethys.Diag(0,1.0,MAX_ORDER,[0.1,0.2,1.0 , 0.3,0.4,1.0], [0.0,0.0,0.0,0.0,0.0,0.0])
 	GF1=Tethys.BareExpansion(diag1, H)
 end

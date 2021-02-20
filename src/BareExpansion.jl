@@ -11,7 +11,8 @@ struct FrohlichHamiltonian
     α
     μ
 end
-FrohlichHamiltonian() = FrohlichHamiltonian(1.0, -1.2) # chemical potential is the bane of my life
+FrohlichHamiltonian(;α=1.0, μ=-1.2) = FrohlichHamiltonian(α, μ)
+# chemical potential is the bane of my life
 
 struct Diag
     p # external momentum
