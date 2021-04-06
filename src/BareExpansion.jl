@@ -1,5 +1,7 @@
-# Starting with §3, a minimalist bare expansion for the Green function of the Frohlich polaron
-# [1] Greitemann, J.; Pollet, L. Lecture Notes on Diagrammatic Monte Carlo for the Fröhlich Polaron. 
+# Starting with §3, a minimalist bare expansion for the Green function of the Frohlich
+# polaron 
+# [1] Greitemann, J.; Pollet, L. Lecture Notes on Diagrammatic Monte Carlo for the
+# Fröhlich Polaron.  
 # SciPost Phys. Lect. Notes 2018, 2. 
 # https://doi.org/10.21468/SciPostPhysLectNotes.2
 using Random
@@ -11,8 +13,9 @@ struct FrohlichHamiltonian
     α
     μ
 end
+#  chemical potential is the bane of my life
 FrohlichHamiltonian(;α=1.0, μ=-1.2) = FrohlichHamiltonian(α, μ)
-# chemical potential is the bane of my life
+FröhlichHamiltonian=FrohlichHamiltonian #I'm sure I will live to regret this alias...
 
 struct Diag
     p # external momentum
@@ -39,9 +42,11 @@ function BareExpansion(d::Diag, H::FrohlichHamiltonian;  verbose=false)
     
     # locate all el/ph interactions, and store the momentum exchange at this
     # point 
-    deltas=vcat( [[p[1],-p[3]] for p in eachrow(d.phonon)], [[p[2],+p[3]] for p in eachrow(d.phonon)])
+    deltas=vcat( [[p[1],-p[3]] for p in eachrow(d.phonon)], [[p[2],+p[3]] for p in
+                                                             eachrow(d.phonon)])
     # time order the operators, so you can keep track of momentum
     timesorted=sortperm(deltas)
+
 
     logG0tot=0.0
     p=d.p
@@ -101,22 +106,22 @@ function Monte!(d::Diag, H::FrohlichHamiltonian;  verbose=false)
     if verbose println("Moves: $(d.move)") end
     d.phonon .+= d.move
 
-    # check whether physical 
+    # check whether physical, or we've messed up the diagram 
     if diagramisphysical(d)==false
         d.phonon .-= d.move # undo our move
         return GF0 # return original GF ?
     end
 
     GF1=BareExpansion(d, H)
-    r=GF1/GF0
+    r=GF1/GF0 # MCMC acceptance ratio
 
     if verbose println("GF0: $(GF0) GF1: $(GF1) r: $(r)") end
 
-    if r > rand()
+    if r > rand() # accept diagram
         if verbose println("Accept?!") end
         # log GW to histogram I guess...
         return GF1
-    else
+    else # reject diagram
         if verbose println("Reject!") end
         d.phonon .-=  d.move  # delete our effects
         return GF0
