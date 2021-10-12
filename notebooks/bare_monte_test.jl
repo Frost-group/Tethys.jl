@@ -23,20 +23,20 @@ using BenchmarkTools
 gr(format=:png, size=(800,600)) # Force raster / PNG, as otherwise millions of data points get sent to web browser ^_^
 
 # ╔═╡ 141e94f8-7362-11eb-3606-6360ade0fefc
-H=Tethys.FrohlichHamiltonian(α=5.0, μ=-6)
+Ĥ=Tethys.FrohlichHamiltonian(α=5.0, μ=-6)
 
 # ╔═╡ 9a8c77a0-a593-11ea-09e0-5177021a936e
 begin
 	MAX_ORDER=2
 	diag1=Tethys.Diag(0,1.0,MAX_ORDER,[0.1,0.2,1.0 , 0.3,0.4,1.0], [0.0,0.0,0.0,0.0,0.0,0.0])
-	GF1=Tethys.BareExpansion(diag1, H)
+	GF1=Tethys.BareExpansion(diag1, Ĥ)
 end
 
 # ╔═╡ 6c3748a8-a5a7-11ea-2490-d5e6dce272a8
 diag1
 
 # ╔═╡ ddcd5f98-a593-11ea-1b0f-6f6067269fc4
-GF2=Tethys.Monte!(diag1, H)
+GF2=Tethys.Monte!(diag1, Ĥ)
 
 # ╔═╡ 69b81526-a5a7-11ea-272f-21121dbbfbb9
 diag1
@@ -46,7 +46,7 @@ begin
 	diag=Tethys.Diag(0,1.0,MAX_ORDER,[0.1,0.2,1.0 , 0.3,0.4,1.0], [0,0,0,0,0,0])
 	MC=[]
 	for i in 1:1_000_000
-		GF=Tethys.Monte!(diag, H)
+		GF=Tethys.Monte!(diag, Ĥ)
 		append!(MC,GF)
 	end
 end
@@ -64,7 +64,7 @@ density(MC)
 diag
 
 # ╔═╡ d16e91d0-a599-11ea-23f1-1963e0d078bb
-Tethys.BareExpansion(diag, H)
+Tethys.BareExpansion(diag, Ĥ)
 
 # ╔═╡ abd6ba19-16c4-4844-98bc-b1c7ee5716bd
 # Benchmarking below here...
