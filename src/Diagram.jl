@@ -292,6 +292,60 @@ function remove_arc!(diagram::Diagram)
     end
 end
 
+function swap_arc!(diagram::Diagram)
+
+    order=diagram.order
+    m=diagram.mass
+    μ=diagram.μ
+    ω=diagram.ω
+    α=diagram.α
+    α_squared=2pi*α*sqrt(2)
+
+    if order<2
+        return false
+    end
+
+    arc_box=diagram.arc_box
+    sort!(arc_box, by = x -> x.index_in)
+    index=rand(1:length(arc_box)-1)
+    arc_1=arc_box[index]
+    arc_2=arc_box[index+1]
+
+    if (arc_1.index_out-arc_1.index_in)>2 || (arc_2.index_out-arc_2.index_in)>2 #|| arc_1.index_out != arc_2.index_in
+        return false
+    end
+
+    τ_a=arc_1.period[1]
+    τ_1=arc_1.period[2]
+    τ_2=arc_2.period[1]
+    τ_b=arc_2.period[2]
+    q1=arc_1.q
+    q2=arc_2.q
+    line_box=diagram.line_box
+    line=line_box[arc_1.index_out]
+
+    w_x=green_zero(line)*phono_propagator(arc_1)*phono_propagator(arc_2)
+
+    new_arc1=Arc(q1,[τ_a,τ_2],ω,arc_1.index_in,arc_1.index_out+1)
+    new_arc2=Arc(q2,[τ_1,τ_b],ω,arc_2.index_in-1,arc_2.index_out)
+    new_line=Line(line.k-q1-q2 ,[τ_1,τ_2], m, μ, line.index)
+
+    w_y=green_zero(new_line)*phono_propagator(new_arc1)*phono_propagator(new_arc2)
+
+    r=w_y/w_x
+
+    if r<rand()
+        return false
+    else
+        deleteat!(line_box, line.index)
+        insert!(line_box, line.index, new_line)
+        deleteat!(arc_box, index:index+1)
+        insert!(arc_box, index, new_arc1)
+        insert!(arc_box, index+1, new_arc2)
+        return true
+    end
+end
+
 function check_index(diagram::Diagram)
     index_box=[]
     for index in 1:length(diagram.line_box)
@@ -349,6 +403,12 @@ begin
         end
         if remove_arc!(diagram_a)
             println("remove")
+            # check_arcindex(diagram_a)
+            check_index(diagram_a)
+            # check_timeorder(diagram_a)
+        end
+        if swap_arc!(diagram_a)
+            println("swap")
             # check_arcindex(diagram_a)
             check_index(diagram_a)
             # check_timeorder(diagram_a)
