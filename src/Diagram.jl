@@ -19,6 +19,7 @@ mutable struct Diagram
     
     arc_box :: Array{Arc}
     line_box:: Array{Line}
+    sign_box:: Array{Array{Int64, 1}, 1}
 
     p_ins :: Float64
     p_rem :: Float64
@@ -28,7 +29,8 @@ mutable struct Diagram
         τ = rand()*max_τ
         p_grid=collect(LinRange(0, p_max, grid_num))
         p_x=rand(p_grid)
-        new(mass, μ, ω, α, [p_x,0,0], p_grid, τ, max_τ, 0, max_order, [], [Line([p_x,0,0], [0, τ], mass, μ, 1)], p_ins, p_rem)
+        new(mass, μ, ω, α, [p_x,0,0], p_grid, τ, max_τ, 0, max_order, [], 
+        [Line([p_x,0,0], [0, τ], mass, μ, 1,false)], [[0,0]],p_ins, p_rem)
     end
 
 end
@@ -52,6 +54,7 @@ mutable struct Line <:Propagator
     mass::Float64
     μ::Float64
     index::Int64
+    covered::Bool
 end
 
 function green_zero(diagram::Diagram)
@@ -72,7 +75,7 @@ function green_zero(line::Line)
     return exp(-τ*(norm(p)^2/(2m)-μ))
 end
 
-function phono_propagator(arc::Arc)
+function phonon_propagator(arc::Arc)
     p=arc.q
     τ=arc.period[2]-arc.period[1]
     ω =arc.ω 
@@ -156,13 +159,14 @@ function insert_arc!(diagram::Diagram)
 
     time=[τ_L,τ_1,τ_2,τ_R]
     k_box=[line.k,line.k-q,line.k]
+    covered=[false,true,false]
     line_to_add=[]
 
     w_x=green_zero(line)
-    w_y=phono_propagator(new_arc)*α_squared/(2*pi)^3
+    w_y=phonon_propagator(new_arc)*α_squared/(2*pi)^3
 
     for i in 1:3
-        new_line=Line(k_box[i] ,[time[i],time[i+1]], m, μ, index+i-1)
+        new_line=Line(k_box[i] ,[time[i],time[i+1]], m, μ, index+i-1, covered[i])
         push!(line_to_add,new_line)
         w_y*=green_zero(new_line)
     end
@@ -180,9 +184,13 @@ function insert_arc!(diagram::Diagram)
     else
         diagram.order+=1
         deleteat!(line_box, index)
+        sign_box=diagram.sign_box
+        sign_to_add=[[copy(sign_box[index][1]),-1],[-1,1],[1,copy(sign_box[index][2])]]
+        deleteat!(sign_box, index)
 
         for i in 1:3
             insert!(line_box, index, line_to_add[4-i])
+            insert!(sign_box, index, sign_to_add[4-i])
         end
         # println("insert index is ",[index,index+2])
         if length(line_box)>=index+3
@@ -239,10 +247,10 @@ function remove_arc!(diagram::Diagram)
 
     τ_L=line_in.period[1]
     τ_R=line_out.period[2]
-    new_line=Line(line_in.k ,[τ_L,τ_R], m, μ, index_in)
+    new_line=Line(line_in.k ,[τ_L,τ_R], m, μ, index_in,false)
 
     w_x=green_zero(new_line)
-    w_y=phono_propagator(arc)*α_squared/(2*pi)^3
+    w_y=phonon_propagator(arc)*α_squared/(2*pi)^3
 
     for i in 1:3
         w_y*=green_zero(line_to_rem[i])
@@ -267,6 +275,13 @@ function remove_arc!(diagram::Diagram)
         deleteat!(arc_box, index)
         deleteat!(line_box, index_in:index_out)
         insert!(line_box, index_in, new_line)
+        covered=false
+
+        sign_box=diagram.sign_box
+        sign_to_add=[sign_box[index_in][1],sign_box[index_out][2]]
+        deleteat!(sign_box, index_in:index_out)
+        insert!(sign_box, index_in, sign_to_add)
+        
 
         if length(line_box)>=index_in+1
             for i in index_in+1:length(line_box)
@@ -282,13 +297,35 @@ function remove_arc!(diagram::Diagram)
                 arc.index_out-=2
             elseif arc.index_in<index_in && arc.index_out>index_in
                 arc.index_out-=2
+                covered=true
             # elseif arc.index_in>index_in && arc.index_out<index_out
             #     arc.index_in-=1
             #     arc.index_out-=1
             end
         end
 
+        if covered
+            line_box[index_in].covered=covered
+        end
+
         return true
+    end
+end
+
+function arc_judge(arc::Arc,sign::Int64,bound::Bool,index::Int64)
+    # bound true is right, false is left
+    if bound 
+        if sign == 1
+            return arc.index_out-1 == index
+        else
+            return arc.index_in == index
+        end
+    else
+        if sign == 1
+            return arc.index_out == index
+        else
+            return arc.index_in+1 == index
+        end
     end
 end
 
@@ -298,50 +335,95 @@ function swap_arc!(diagram::Diagram)
     m=diagram.mass
     μ=diagram.μ
     ω=diagram.ω
-    α=diagram.α
-    α_squared=2pi*α*sqrt(2)
 
     if order<2
         return false
     end
 
-    arc_box=diagram.arc_box
-    sort!(arc_box, by = x -> x.index_in)
-    index=rand(1:length(arc_box)-1)
-    arc_1=arc_box[index]
-    arc_2=arc_box[index+1]
+    line_box=diagram.line_box
+    line_index=rand(2:2*order)
+    chosen_line=line_box[line_index]
 
-    if (arc_1.index_out-arc_1.index_in)>2 || (arc_2.index_out-arc_2.index_in)>2 #|| arc_1.index_out != arc_2.index_in
+    if chosen_line.covered
         return false
     end
 
-    τ_a=arc_1.period[1]
-    τ_1=arc_1.period[2]
-    τ_2=arc_2.period[1]
-    τ_b=arc_2.period[2]
-    q1=arc_1.q
-    q2=arc_2.q
-    line_box=diagram.line_box
-    line=line_box[arc_1.index_out]
+    sign=diagram.sign_box[line_index]
+    arc_box=diagram.arc_box
+    left_check=false
+    right_check=false
+    left_index=0
+    right_index=0
 
-    w_x=green_zero(line)*phono_propagator(arc_1)*phono_propagator(arc_2)
+    for i in 1:order
+        arc=arc_box[i]
+        if !left_check
+            if arc_judge(arc,sign[1],false,line_index)
+                left_index=i
+                left_check=true
+            end
+        end
 
-    new_arc1=Arc(q1,[τ_a,τ_2],ω,arc_1.index_in,arc_1.index_out+1)
-    new_arc2=Arc(q2,[τ_1,τ_b],ω,arc_2.index_in-1,arc_2.index_out)
-    new_line=Line(line.k-q1-q2 ,[τ_1,τ_2], m, μ, line.index)
+        if !right_check
+            if arc_judge(arc,sign[2],true,line_index)
+                right_index=i
+                right_check=true
+            end
+        end
 
-    w_y=green_zero(new_line)*phono_propagator(new_arc1)*phono_propagator(new_arc2)
+        if right_check && left_check
+            break
+        end
+    end
+
+    arc_l=arc_box[left_index]
+    arc_r=arc_box[right_index]
+
+    q1=arc_l.q
+    q2=arc_r.q
+
+    if sign[1] == 1
+        new_arc_l=Arc(q1,[arc_l.period[1],chosen_line.period[2]],ω,arc_l.index_in,line_index+1)
+    else
+        new_arc_l=Arc(q1,[chosen_line.period[2],arc_l.period[2]],ω,line_index,arc_l.index_out)
+    end
+
+    if sign[2] == 1
+        new_arc_r=Arc(q2,[arc_r.period[1],chosen_line.period[1]],ω,arc_r.index_in,line_index)
+    else
+        new_arc_r=Arc(q2,[chosen_line.period[1],arc_r.period[2]],ω,line_index-1,arc_r.index_out)
+    end
+
+    new_line=Line(chosen_line.k-sign[1]*q1+sign[2]*q2 ,chosen_line.period, m, μ, line_index,false)
+    w_x=green_zero(chosen_line)*phonon_propagator(arc_l)*phonon_propagator(arc_r)
+    w_y=green_zero(new_line)*phonon_propagator(new_arc_l)*phonon_propagator(new_arc_r)
 
     r=w_y/w_x
 
     if r<rand()
         return false
     else
-        deleteat!(line_box, line.index)
-        insert!(line_box, line.index, new_line)
-        deleteat!(arc_box, index:index+1)
-        insert!(arc_box, index, new_arc1)
-        insert!(arc_box, index+1, new_arc2)
+        deleteat!(line_box, line_index)
+        insert!(line_box, line_index, new_line)
+        sign_box=diagram.sign_box
+        deleteat!(sign_box, line_index)
+        insert!(sign_box, line_index, [sign[2],sign[1]])
+        sign_box[line_index-1]=[sign_box[line_index-1][1],sign[2]]
+        sign_box[line_index+1]=[sign[1],sign_box[line_index+1][2]]
+
+        deleteat!(arc_box, left_index)
+        insert!(arc_box, left_index, new_arc_l)
+        deleteat!(arc_box, right_index)
+        insert!(arc_box, right_index, new_arc_r)
+
+        if new_arc_l.index_out-new_arc_l.index_in == 2
+            line_box[line_index-1].covered=true
+        end
+
+        if new_arc_r.index_out-new_arc_r.index_in == 2
+            line_box[line_index+1].covered=true
+
+        end
         return true
     end
 end
