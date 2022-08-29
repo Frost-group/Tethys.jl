@@ -3,6 +3,27 @@ using Plots
 using Distributions
 using LinearAlgebra
 
+abstract type Propagator end
+
+
+mutable struct Arc <:Propagator
+    q :: Array{Float64}
+    period :: Array{Float64}
+    ω :: Float64
+    index_in :: Int64
+    index_out :: Int64
+end
+
+
+mutable struct Line <:Propagator
+    k :: Array{Float64}
+    period :: Array{Float64}
+    mass::Float64
+    μ::Float64
+    index::Int64
+    covered::Bool
+end
+
 mutable struct Diagram
 
     mass:: Float64
@@ -33,28 +54,6 @@ mutable struct Diagram
         [Line([p_x,0,0], [0, τ], mass, μ, 1,false)], [[0,0]],p_ins, p_rem)
     end
 
-end
-
-
-abstract type Propagator end
-
-
-mutable struct Arc <:Propagator
-    q :: Array{Float64}
-    period :: Array{Float64}
-    ω :: Float64
-    index_in :: Int64
-    index_out :: Int64
-end
-
-
-mutable struct Line <:Propagator
-    k :: Array{Float64}
-    period :: Array{Float64}
-    mass::Float64
-    μ::Float64
-    index::Int64
-    covered::Bool
 end
 
 function green_zero(diagram::Diagram)
@@ -176,7 +175,7 @@ function insert_arc!(diagram::Diagram)
 
     p_y_x=diagram.p_rem/(order+1)
     
-    r=w_y*p_y_x/(w_x*p_x_y)
+    r=w_y*p_y_x/(w_x*p_x_y)#*(2order+1)
     # println("insert_r=",r)
 
     if r<rand()
@@ -264,7 +263,7 @@ function remove_arc!(diagram::Diagram)
 
     p_y_x=diagram.p_rem/order
 
-    r=(w_x*p_x_y)/(w_y*p_y_x)
+    r=(w_x*p_x_y)/(w_y*p_y_x)#/(2order-1)
     # println("remove_r=",r)
 
     if r<rand()
@@ -428,6 +427,34 @@ function swap_arc!(diagram::Diagram)
     end
 end
 
+function extend!(diagram::Diagram)
+
+    p=diagram.p
+    μ=diagram.μ
+    m=diagram.mass
+    dispersion=norm(p)^2/(2m)-μ
+    line_box=diagram.line_box
+    order=diagram.order
+    line_end=line_box[2*order+1]
+
+    τ_new=line_end.period[1]-log(rand())/abs(dispersion)
+
+    if τ_new>diagram.max_τ
+        return false
+    end
+
+    line_end.period[2]=τ_new
+    line_box[2*order+1]=line_end
+    diagram.τ=τ_new
+
+    return true
+
+end
+
+function measure(diagram::Diagram)
+    return [diagram.order,diagram.τ]
+end
+
 function check_index(diagram::Diagram)
     index_box=[]
     for index in 1:length(diagram.line_box)
@@ -456,52 +483,5 @@ function check_timeorder(diagram::Diagram)
     end
 
     println("index_box",index_box)
-end
-
-begin
-    p_max=10; max_τ=20; max_order=50; mass=1; μ=1.6; ω=1; α=1.2
-    diagram_a=Diagram(p_max, max_τ, max_order, mass, μ, ω, α)
-
-    loop=10
-    record=[]
-    for i in 1:loop
-        τ_update!(diagram_a)
-        append!(record,diagram_a.τ)
-    end
-    histogram(record)
-end
-
-begin
-    println("begin")
-    diagram_a=Diagram(p_max, max_τ, max_order, mass, μ, ω, α)
-    loop=100
-    for i in 1:loop
-
-        if insert_arc!(diagram_a)
-            println("insert")
-            check_index(diagram_a)
-            # check_arcindex(diagram_a)
-            # check_timeorder(diagram_a)
-        end
-        if remove_arc!(diagram_a)
-            println("remove")
-            # check_arcindex(diagram_a)
-            check_index(diagram_a)
-            # check_timeorder(diagram_a)
-        end
-        if swap_arc!(diagram_a)
-            println("swap")
-            # check_arcindex(diagram_a)
-            check_index(diagram_a)
-            # check_timeorder(diagram_a)
-        end
-
-        # if insert_arc!(diagram_a)
-        #     check_arcindex(diagram_a)
-        #     check_timeorder(diagram_a)
-        #     println("order is ",diagram_a.order)
-        # end
-        # println("order is ",diagram_a.order)
-    end
 end
 
