@@ -5,6 +5,19 @@ using LinearAlgebra
 
 abstract type Propagator end
 
+abstract type Regime end
+
+struct Diff_2 <: Regime  #simple form of calculating action
+    function Diff_2()
+        new()
+    end
+end
+
+struct Diff_more <: Regime #Calculating using the primitive approximation as per Ceperly paper
+    function Diff_more()
+        new()
+    end
+end
 
 mutable struct Arc <:Propagator
     q :: Array{Float64}
@@ -176,6 +189,9 @@ function insert_arc!(diagram::Diagram)
     p_y_x=diagram.p_rem/(order+1)
     
     r=w_y*p_y_x/(w_x*p_x_y)#*(2order+1)
+    
+    # vertex=4*pi*α*ω^1.5/sqrt(2m)
+    # r=sqrt(m/(2*pi*arc_T))^3*vertex*(2order+1)*(τ_R-τ_L)*diagram.p_rem/diagram.p_ins*exp(arc_T*dot(q,line.k)/m)/(ω*(order+1)*norm(q)^2)
     # println("insert_r=",r)
 
     if r<rand()
@@ -215,7 +231,7 @@ function insert_arc!(diagram::Diagram)
     end
 end
 
-function remove_arc!(diagram::Diagram)
+function remove_arc!(diagram::Diagram,regime::Diff_2)
 
     order=diagram.order
     m=diagram.mass
@@ -224,7 +240,7 @@ function remove_arc!(diagram::Diagram)
     α=diagram.α
     α_squared=2pi*α*sqrt(2)
 
-    if order-1<1
+    if order-1<0
         return false
     end
     
@@ -265,6 +281,9 @@ function remove_arc!(diagram::Diagram)
 
     r=(w_x*p_x_y)/(w_y*p_y_x)#/(2order-1)
     # println("remove_r=",r)
+    # vertex=4*pi*α*ω^1.5/sqrt(2m)
+    # r=sqrt(m/(2*pi*arc_T))^3*vertex*(2order-1)*(τ_R-τ_L)*diagram.p_rem/diagram.p_ins*exp(arc_T*dot(q,line_in.k)/m)/(ω*(order)*norm(q)^2)
+    # r=1/r
 
     if r<rand()
         return false
@@ -305,6 +324,152 @@ function remove_arc!(diagram::Diagram)
 
         if covered
             line_box[index_in].covered=covered
+        end
+
+        return true
+    end
+end
+
+function remove_arc!(diagram::Diagram,regime::Diff_more)
+
+    order=diagram.order
+    m=diagram.mass
+    μ=diagram.μ
+    ω=diagram.ω
+    α=diagram.α
+    α_squared=2pi*α*sqrt(2)
+
+    if order-1<0
+        return false
+    end
+    
+    arc_box=diagram.arc_box
+    index=rand(1:length(arc_box))
+    arc=arc_box[index]
+    index_in=arc.index_in
+    index_out=arc.index_out
+    q=arc.q
+
+    # if index_out-index_in>2
+    #     return false
+    # end
+
+    old_box=copy(diagram.line_box)
+    line_box=diagram.line_box
+    line_in=line_box[index_in]
+    line_out=line_box[index_out]
+    # line_to_rem=[line_box[index_in],line_box[index_in+1],line_box[index_in+2]]
+
+    τ_L=line_in.period[1]
+    τ_R=line_out.period[2]
+    # new_line=Line(line_in.k ,[τ_L,τ_R], m, μ, index_in,false)
+
+    w_x=1
+    w_y=phonon_propagator(arc)*α_squared/(2*pi)^3
+
+    for i in index_in+1:index_out-1
+        line_tem=line_box[i]
+        w_y*=green_zero(line_tem)
+        line_tem.index-=1
+        line_tem.k+=q
+        w_x*=green_zero(line_tem)
+    end
+
+    τ_1=copy(arc.period[1])
+    τ_2=copy(arc.period[2])
+    arc_T=τ_2-τ_1
+    p_x_y=diagram.p_ins/(τ_R-τ_L)*ω*exp(-ω*arc_T)
+    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
+
+    p_y_x=diagram.p_rem/order
+
+    r=(w_x*p_x_y)/(w_y*p_y_x)#/(2order-1)
+    # println("remove_r=",r)
+    # vertex=4*pi*α*ω^1.5/sqrt(2m)
+    # r=sqrt(m/(2*pi*arc_T))^3*vertex*(2order-1)*(τ_R-τ_L)*diagram.p_rem/diagram.p_ins*exp(arc_T*dot(q,line_in.k)/m)/(ω*(order)*norm(q)^2)
+    # r=1/r
+
+    if r<rand()
+        diagram.line_box=old_box
+        return false
+    else
+        sign_box=diagram.sign_box
+        diagram.order-=1
+        deleteat!(arc_box, index)
+
+        if index_out-index_in==2
+            line_tem=line_box[index_in+1]
+            line_tem.period[1]=τ_L
+            line_tem.period[2]=τ_R
+            line_tem.covered=false
+            sign_to_add=[sign_box[index_in][1],sign_box[index_out][2]]
+            deleteat!(sign_box, index_in:index_out)
+            insert!(sign_box, index_in, sign_to_add)
+            # line_box[index_in+1]=line_tem
+        else
+            line_tem=line_box[index_in+1]
+            line_tem.period[1]=τ_L
+            sign_to_add=[sign_box[index_in][1],sign_box[index_in+1][2]]
+            deleteat!(sign_box, index_in:index_in+1)
+            insert!(sign_box, index_in, sign_to_add)
+            # line_box[index_in+1]=line_tem
+
+            line_tem=line_box[index_out-1]
+            line_tem.period[2]=τ_R
+            sign_to_add=[sign_box[index_out-2][1],sign_box[index_out-1][2]]
+            deleteat!(sign_box, index_out-2:index_out-1)
+            insert!(sign_box, index_out-2, sign_to_add)
+            # line_box[index_in+1]=line_tem
+        end
+
+        deleteat!(line_box, [index_in,index_out])
+
+        # deleteat!(line_box, index_in:index_out)
+        # insert!(line_box, index_in, new_line)
+        # covered=false
+
+        # sign_box=diagram.sign_box
+        # sign_to_add=[sign_box[index_in][1],sign_box[index_out][2]]
+        # deleteat!(sign_box, index_in:index_out)
+        # insert!(sign_box, index_in, sign_to_add)
+        
+
+        if length(line_box)>=index_out+1
+            for i in index_out+1:length(line_box)
+                line_box[i].index=i
+            end
+        end
+
+        for arc in diagram.arc_box
+            if arc.index_out<=index_in
+                continue
+            elseif arc.index_in>=index_out
+                arc.index_in-=2
+                arc.index_out-=2
+            elseif arc.index_in<index_in && arc.index_out>index_out
+                arc.index_out-=2
+                if arc.index_out-arc.index_in == 2
+                    line_box[arc.index_in+1].covered=true
+                end
+            elseif arc.index_in>index_in && arc.index_out<index_out
+                arc.index_in-=1
+                arc.index_out-=1
+            elseif index_in<arc.index_in<index_out
+                arc.index_in-=1
+                arc.index_out-=2
+                if arc.index_out-arc.index_in == 2
+                    line_box[arc.index_in+1].covered=true
+                end
+            elseif index_in<arc.index_out<index_out
+                arc.index_out-=1
+                if arc.index_out-arc.index_in == 2
+                    line_box[arc.index_in+1].covered=true
+                end
+                # covered=true
+            # elseif arc.index_in>index_in && arc.index_out<index_out
+            #     arc.index_in-=1
+            #     arc.index_out-=1
+            end
         end
 
         return true
@@ -374,7 +539,7 @@ function swap_arc!(diagram::Diagram)
             break
         end
     end
-
+    # println("swap_index is:",line_index)
     arc_l=arc_box[left_index]
     arc_r=arc_box[right_index]
 
@@ -416,11 +581,11 @@ function swap_arc!(diagram::Diagram)
         insert!(arc_box, right_index, new_arc_r)
 
         if new_arc_l.index_out-new_arc_l.index_in == 2
-            line_box[line_index-1].covered=true
+            line_box[new_arc_l.index_in+1].covered=true
         end
 
         if new_arc_r.index_out-new_arc_r.index_in == 2
-            line_box[line_index+1].covered=true
+            line_box[new_arc_r.index_in+1].covered=true
 
         end
         return true
