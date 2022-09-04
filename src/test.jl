@@ -1,10 +1,12 @@
 include("Diagram.jl")
+include("update.jl")
 using Random
+using LsqFit
 using JLD2
 # time update test
 begin
-    num_mea=1; regime=Diff_more()
-    p_max=10; max_τ=40; max_order=0; mass=1; μ=-6; ω=1; α=5
+    num_mea=1; regime=Diff_more(); regime_2=Diff_2()
+    p_max=10; max_τ=30; max_order=500; mass=1; μ=-2.2; ω=1; α=2
     diagram_a=Diagram(p_max, max_τ, max_order, mass, μ, ω, α)
 
     loop=10
@@ -51,55 +53,125 @@ begin
     end
 end
 
-begin
-    statis=zeros(max_order+1, 300)
-    bin_width=max_τ/300
-end
 
-# measurement test (with separating order=0,1 cases)
 begin
     println("begin")
-    # Random.seed!(124)
+    # Random.seed!(1234)
     # record=[]
-    loop=1000
-    for j in 1:100000
-        diagram_a=Diagram(p_max, max_τ, max_order, mass, μ, ω, α)
-        diagram_a.p=[0.,0.,0.]
+    loop=10000
+    for j in 1:50000
         # loop_record=[]
         println(j)
         for i in 1:loop
-            # if j==9
-            #     println(diagram_a.order)
-            # end
-            # println("j:",j,",i:",i)
             q=rand()
             if diagram_a.order == 0
                 if q<0.5
-                    insert_arc!(diagram_a)
+                    diagram_a.p_rem=1/3
+                    insert_arc!(diagram_a,regime)
+                    diagram_a.p_rem=0.5
                 else
                     extend!(diagram_a)
                 end
             elseif diagram_a.order == 1
                 if q<1/3
-                    insert_arc!(diagram_a)
+                    diagram_a.p_ins=1/3
+                    diagram_a.p_rem=0.25
+                    insert_arc!(diagram_a,regime)
+                    diagram_a.p_ins=0.5
+                    diagram_a.p_rem=0.5
                 elseif q<2/3
+                    diagram_a.p_rem=1/3
                     remove_arc!(diagram_a,regime)
+                    diagram_a.p_rem=0.5
                 else
                     extend!(diagram_a)
                 end
-            else
+            elseif  diagram_a.order == 2
                 if q<0.25
-                    insert_arc!(diagram_a)
+                    insert_arc!(diagram_a,regime)
                 elseif q<0.5
+                    diagram_a.p_ins=1/3
+                    diagram_a.p_rem=0.25
                     remove_arc!(diagram_a,regime)
+                    diagram_a.p_ins=0.5
+                    diagram_a.p_rem=0.5        
                 elseif q<0.75
                     swap_arc!(diagram_a)
                 else
                     extend!(diagram_a)
                 end
-
+            else
+                if q<0.25
+                    insert_arc!(diagram_a,regime)
+                elseif q<0.5
+                    remove_arc!(diagram_a,regime)        
+                elseif q<0.75
+                    swap_arc!(diagram_a)
+                else
+                    extend!(diagram_a)
+                end
             end
             statis[diagram_a.order+1,Int(div(diagram_a.τ,bin_width,RoundUp))]+=1
+        end
+    end
+end
+
+# measurement test (with separating order=0,1 cases)
+begin
+    println("begin")
+    # Random.seed!(1234)
+    # record=[]
+    diagram_a=Diagram(0, max_τ, max_order, mass, μ, ω, α)
+    diagram_a.p=[0.,0.,0.]
+    loop=10000
+    for j in 1:5000
+        # loop_record=[]
+        println(j)
+        for i in 1:loop
+            q=rand()
+            if diagram_a.order == 0
+                # println("0 insert")
+                insert_arc!(diagram_a,regime)
+                extend!(diagram_a)
+                # if q<0.5
+                #     # println("0insert")
+                #     insert_arc!(diagram_a,regime)
+                # else
+                #     extend!(diagram_a)
+                # end
+            elseif diagram_a.order == 1
+                if q<0.5
+                    # println("insert")
+                    insert_arc!(diagram_a,regime)
+                    extend!(diagram_a)
+                # elseif q<2/3
+                #     # println("remove")
+                #     remove_arc!(diagram_a,regime)
+                else
+                    # println("remove")
+                    remove_arc!(diagram_a,regime)
+                    extend!(diagram_a)
+                end
+            else
+                if q<0.5
+                    insert_arc!(diagram_a,regime)
+                    swap_arc!(diagram_a)
+                    extend!(diagram_a)
+                else#if q<0.5
+                    remove_arc!(diagram_a,regime)
+                    swap_arc!(diagram_a)
+                    extend!(diagram_a)
+                # elseif q<0.75
+                #     swap_arc!(diagram_a)
+                # else
+                #     # swap_arc!(diagram_a)
+                #     extend!(diagram_a)
+                end
+
+            end
+            if j>10
+                statis[diagram_a.order+1,Int(div(diagram_a.τ,bin_width,RoundUp))]+=1
+            end
             # push!(loop_record,measure(diagram_a))
 
             # if i >=100
@@ -189,37 +261,4 @@ begin
     save_object("record1.jld2", record)
     b=load_object("E://data_record//record"*string(num_mea)*".jld2")
     # save_object()
-end
-
-begin
-    time=collect(1:75)*bin_width.-(bin_width/2)
-    plot(time,statis[1,1:75],yaxis=:log)
-    display(plot!(time,statis[1,1]*exp.(μ.*time)))
-    println(-(log(statis[1,1])- log(statis[1,20]))/(bin_width*19))
-    println(-(log(statis[1,75])- log(statis[1,150]))/(bin_width*74))
-end
-
-begin
-    time=collect(1:100)*bin_width.-(bin_width/2)
-    plot(time,statis[1,1:100])
-    for order in 2:10+1
-        if order == 10+1
-            display(plot!(time,statis[order,1:100]))
-        else
-            plot!(time,statis[order,1:100])
-        end
-    end
-end
-
-begin
-    max_check=20
-    data=[sum(statis[i,:]) for i in 1:max_check+1]
-    plot(collect(0:max_check),data, markershape=:circle,yaxis=:log,xticks=0:max_check)
-end
-
-begin
-    time=collect(1:300)*bin_width.-(bin_width/2)
-    data=[sum(statis[:,i]) for i in 1:300]
-    display(plot(time,data,markershape=:circle,yaxis=:log))
-    println(-(log(data[150])- log(data[75]))/(bin_width*74)+μ)
 end
