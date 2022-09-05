@@ -1,5 +1,10 @@
 include("Diagram.jl")
 
+function normalization(τ,τ_R,τ_L,ω)
+    fraction=(exp(-ω*(τ-τ_R))-exp(-ω*(τ-τ_L)))/(ω*(τ_R-τ_L))
+    return 1-fraction
+end
+
 function p_update!(diagram::Diagram)
 
     if diagram.order != 0
@@ -168,7 +173,7 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     line.period[1]=τ_1
     arc_T=τ_2-τ_1
     q=rand(Normal(0,sqrt(m/arc_T)),3)
-
+    
     w_x=1
     w_y=1
     τ_R_2=0
@@ -199,15 +204,17 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
         end
     end
 
-    
+    # println("index_in:",index_in)
+    # println("index_out",index_out-2)
     new_arc=Arc(q,[τ_1,τ_2],ω,index_in,index_out)
 
     w_y*=phonon_propagator(new_arc)*α_squared/(2*pi)^3
-    p_x_y=diagram.p_ins/(τ_R-τ_L)*ω*exp(-ω*arc_T)
-    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5#*weighting/exp(-ω*τ_1)
+    p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)*ω*exp(-ω*arc_T)#/(1-exp(-ω*(τ-τ_1)))#
+    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5#/normalization(τ,τ_R,τ_L,ω)#*weighting/exp(-ω*τ_1)
     # println("ratio=",line_length/(τ-τ_1))
     p_y_x=diagram.p_rem/(order+1)
-    r=w_y*p_y_x/(w_x*p_x_y)*(2order+1)#*(1-exp(-ω*(τ-τ_1)))^2
+    r=w_y*p_y_x/(w_x*p_x_y)#^2
+    # println("normal",normalization(τ,τ_R,τ_L,ω))
     # println("insert_r=",r)
     # println("insert_topo:",exp(-ω*(τ-τ_1)))
     
@@ -421,10 +428,16 @@ function remove_arc!(diagram::Diagram,regime::Diff_more)
     # line_to_rem=[line_box[index_in],line_box[index_in+1],line_box[index_in+2]]
 
     τ_L=line_in.period[1]
-    τ_R=line_box[index_in+1].period[2]
+
+    if index_out-index_in==2
+        τ_R=line_out.period[2]
+    else
+        τ_R=line_box[index_in+1].period[2]
+    end
+    
     τ_R_2=line_out.period[2]
     # new_line=Line(line_in.k ,[τ_L,τ_R], m, μ, index_in,false)
-
+    
     w_x=1
     w_y=phonon_propagator(arc)*α_squared/(2*pi)^3
 
@@ -439,14 +452,14 @@ function remove_arc!(diagram::Diagram,regime::Diff_more)
     τ_1=arc.period[1]
     τ_2=arc.period[2]
     arc_T=τ_2-τ_1
-    p_x_y=diagram.p_ins/(τ_R-τ_L)#*ω*exp(-ω*arc_T)#*(τ_R_2-line_box[index_out-1].period[1])/(diagram.τ-τ_1)#diagram.τ#
-    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
+    p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)*ω*exp(-ω*arc_T)#/(1-exp(-ω*(diagram.τ-τ_1)))#/(2order-1)*(τ_R_2-line_box[index_out-1].period[1])/(diagram.τ-τ_1)#diagram.τ#
+    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5#/normalization(diagram.τ,τ_R,τ_L,ω)
     # p_x_y*=exp(-ω*line_box[index_out-1].period[1])-exp(-ω*τ_R_2)
     # p_x_y/=exp(-ω*τ_1)
 
     p_y_x=diagram.p_rem/order
 
-    r=(w_x*p_x_y)/(w_y*p_y_x)/(2order-1)#/(1-exp(-ω*(diagram.τ-τ_1)))^2
+    r=(w_x*p_x_y)/(w_y*p_y_x)#^2
     # println("remove_r=",r)
     # vertex=4*pi*α*ω^1.5/sqrt(2m)
     # r=sqrt(m/(2*pi*arc_T))^3*vertex*(2order-1)*(τ_R-τ_L)*diagram.p_rem/diagram.p_ins*exp(arc_T*dot(q,line_in.k)/m)/(ω*(order)*norm(q)^2)
@@ -654,7 +667,6 @@ function swap_arc!(diagram::Diagram)
 
         if new_arc_r.index_out-new_arc_r.index_in == 2
             line_box[new_arc_r.index_in+1].covered=true
-
         end
         return true
     end

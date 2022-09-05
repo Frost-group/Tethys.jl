@@ -60,7 +60,7 @@ end
 
 #zeroth order green function against time
 begin
-    max_time=69
+    max_time=60
     time_1=collect(1:max_time)*bin_width.-(bin_width/2)
     plot(time_1,statis[1,1:max_time],yaxis=:log,label="measured")
     display(plot!(time_1,statis[1,1]*exp.(μ.*time_1),label="theoretical", 
@@ -94,7 +94,7 @@ end
 
 #total green function agaisnt time
 begin
-    max_time=90#218
+    max_time=129#218
     time_1=collect(1:max_time)*bin_width.-(bin_width/2)
     data=[sum(statis[:,i]) for i in 1:max_time]
     display(plot(time_1,data,markershape=:circle,yaxis=:log))
@@ -103,15 +103,18 @@ end
 
 #fitting for ground state energy
 begin
-    min_time=Int(div(6.5,bin_width,RoundUp))
-    max_time=Int(div(7.5,bin_width,RoundUp))
+    min_time=Int(div(5,bin_width,RoundUp))
+    max_time=Int(div(8,bin_width,RoundUp))
     time_1=collect(min_time:max_time)*bin_width.-(bin_width/2)
     data=[sum(statis[:,i]) for i in min_time:max_time]
     model(t, p) = p[1] * exp.(-p[2] * t)
-    p0=[data[1],(α-μ)]
+    p0=[sum(statis[:,1]),(α-μ)]
     fit = curve_fit(model, time_1, data, p0)
     println(fit.param)
     println("error ",standard_errors(fit))
     ener=-α-1.26*(α/10)^2
     println((ener-μ))
+    println()
+    println(fit.param[2]+μ)
+    println(ener)
 end
