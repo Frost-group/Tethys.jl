@@ -1,10 +1,5 @@
 include("Diagram.jl")
 
-function normalization(τ,τ_R,τ_L,ω)
-    fraction=(exp(-ω*(τ-τ_R))-exp(-ω*(τ-τ_L)))/(ω*(τ_R-τ_L))
-    return 1-fraction
-end
-
 function p_update!(diagram::Diagram)
 
     if diagram.order != 0
@@ -179,7 +174,6 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     τ_R_2=0
     index_out=0
     k_out=0
-    weighting=0
 
     #not set covered yet
     for i in index_in:2order+1
@@ -193,7 +187,6 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
         else
             k_out=deepcopy(line_tem.k)
             τ_R_2=deepcopy(line_tem.period[2])
-            weighting=exp(-ω*line_tem.period[1])-exp(-ω*line_tem.period[2])
             line_tem.period[2]=τ_2
             w_x*=green_zero(line_tem)
             line_tem.k-=q
@@ -216,7 +209,6 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     r=w_y*p_y_x/(w_x*p_x_y)#^2
     # println("normal",normalization(τ,τ_R,τ_L,ω))
     # println("insert_r=",r)
-    # println("insert_topo:",exp(-ω*(τ-τ_1)))
     
 
     if r<rand()
@@ -434,7 +426,7 @@ function remove_arc!(diagram::Diagram,regime::Diff_more)
     else
         τ_R=line_box[index_in+1].period[2]
     end
-    
+
     τ_R_2=line_out.period[2]
     # new_line=Line(line_in.k ,[τ_L,τ_R], m, μ, index_in,false)
     

@@ -7,13 +7,13 @@ abstract type Propagator end
 
 abstract type Regime end
 
-struct Diff_2 <: Regime  #simple form of calculating action
+struct Diff_2 <: Regime
     function Diff_2()
         new()
     end
 end
 
-struct Diff_more <: Regime #Calculating using the primitive approximation as per Ceperly paper
+struct Diff_more <: Regime
     function Diff_more()
         new()
     end
@@ -45,7 +45,6 @@ mutable struct Diagram
     α::Float64
 
     p :: Array{Float64}
-    p_grid :: Array{Float64}
     τ :: Float64
     max_τ :: Float64
     order :: Int64
@@ -58,13 +57,11 @@ mutable struct Diagram
     p_ins :: Float64
     p_rem :: Float64
 
-    function Diagram(p_max::Real, max_τ::Real, max_order::Int64, mass::Real, μ::Real, ω::Real, α::Real, 
-        p_ins::Float64=0.5, p_rem::Float64=0.5, grid_num::Int64=1000)
+    function Diagram(p::Real, max_τ::Real, max_order::Int64, mass::Real, μ::Real, ω::Real, α::Real, 
+        p_ins::Float64=0.5, p_rem::Float64=0.5)
         τ = rand()*max_τ
-        p_grid=collect(LinRange(0, p_max, grid_num))
-        p_x=rand(p_grid)
-        new(mass, μ, ω, α, [p_x,0,0], p_grid, τ, max_τ, 0, max_order, [], 
-        [Line([p_x,0,0], [0, τ], mass, μ, 1,false)], [[0,0]],p_ins, p_rem)
+        new(mass, μ, ω, α, [p,0,0], τ, max_τ, 0, max_order, [], 
+        [Line([p,0,0], [0, τ], mass, μ, 1,false)], [[0,0]],p_ins, p_rem)
     end
 
 end
