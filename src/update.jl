@@ -171,6 +171,7 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     
     w_x=1
     w_y=1
+    total_dis=0
     τ_R_2=0
     index_out=0
     k_out=0
@@ -179,19 +180,23 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     for i in index_in:2order+1
         line_tem=line_box[i]
         if line_tem.period[2]<τ_2
-            w_x*=green_zero(line_tem)
+            total_dis+=dispersion(line_tem)
+            #w_x*=green_zero(line_tem)
             line_tem.k-=q
             line_tem.index+=1
-            w_x/=green_zero(line_tem)
+            total_dis-=dispersion(line_tem)
+            #w_x/=green_zero(line_tem)
             continue
         else
             k_out=deepcopy(line_tem.k)
             τ_R_2=deepcopy(line_tem.period[2])
             line_tem.period[2]=τ_2
-            w_x*=green_zero(line_tem)
+            total_dis+=dispersion(line_tem)
+            #w_x*=green_zero(line_tem)
             line_tem.k-=q
             line_tem.index+=1
-            w_x/=green_zero(line_tem)
+            total_dis-=dispersion(line_tem)
+            #w_x/=green_zero(line_tem)
             index_out=i+2
             break
         end
@@ -201,12 +206,13 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     # println("index_out",index_out-2)
     new_arc=Arc(q,[τ_1,τ_2],ω,index_in,index_out)
 
-    w_y*=phonon_propagator(new_arc)*α_squared/(2*pi)^3
-    p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)*ω*exp(-ω*arc_T)#/(1-exp(-ω*(τ-τ_1)))#
+    #w_y*=phonon_propagator(new_arc)*α_squared/(2*pi)^3
+    p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)#*ω*exp(-ω*arc_T)#/(1-exp(-ω*(τ-τ_1)))#
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5#/normalization(τ,τ_R,τ_L,ω)#*weighting/exp(-ω*τ_1)
     # println("ratio=",line_length/(τ-τ_1))
     p_y_x=diagram.p_rem/(order+1)
-    r=w_y*p_y_x/(w_x*p_x_y)#^2
+    #r=w_y*p_y_x/(w_x*p_x_y)
+    r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
     # println("normal",normalization(τ,τ_R,τ_L,ω))
     # println("insert_r=",r)
     
@@ -430,28 +436,31 @@ function remove_arc!(diagram::Diagram,regime::Diff_more)
     τ_R_2=line_out.period[2]
     # new_line=Line(line_in.k ,[τ_L,τ_R], m, μ, index_in,false)
     
+    total_dis=0
     w_x=1
     w_y=phonon_propagator(arc)*α_squared/(2*pi)^3
 
     for i in index_in+1:index_out-1
         line_tem=line_box[i]
-        w_y*=green_zero(line_tem)
+        total_dis+=dispersion(line_tem)
+        #w_y*=green_zero(line_tem)
         line_tem.index-=1
         line_tem.k+=q
-        w_y/=green_zero(line_tem)
+        total_dis-=dispersion(line_tem)
+        #w_y/=green_zero(line_tem)
     end
 
     τ_1=arc.period[1]
     τ_2=arc.period[2]
     arc_T=τ_2-τ_1
-    p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)*ω*exp(-ω*arc_T)#/(1-exp(-ω*(diagram.τ-τ_1)))#/(2order-1)*(τ_R_2-line_box[index_out-1].period[1])/(diagram.τ-τ_1)#diagram.τ#
+    p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)#*ω*exp(-ω*arc_T)#/(1-exp(-ω*(diagram.τ-τ_1)))#/(2order-1)*(τ_R_2-line_box[index_out-1].period[1])/(diagram.τ-τ_1)#diagram.τ#
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5#/normalization(diagram.τ,τ_R,τ_L,ω)
     # p_x_y*=exp(-ω*line_box[index_out-1].period[1])-exp(-ω*τ_R_2)
     # p_x_y/=exp(-ω*τ_1)
 
     p_y_x=diagram.p_rem/order
-
-    r=(w_x*p_x_y)/(w_y*p_y_x)#^2
+    r=((2*pi)^3*p_x_y*norm(arc.q)^2)/(exp(total_dis)*p_y_x*α_squared)
+    #r=(w_x*p_x_y)/(w_y*p_y_x)#^2
     # println("remove_r=",r)
     # vertex=4*pi*α*ω^1.5/sqrt(2m)
     # r=sqrt(m/(2*pi*arc_T))^3*vertex*(2order-1)*(τ_R-τ_L)*diagram.p_rem/diagram.p_ins*exp(arc_T*dot(q,line_in.k)/m)/(ω*(order)*norm(q)^2)

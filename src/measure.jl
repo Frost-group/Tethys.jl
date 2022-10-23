@@ -280,6 +280,204 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,n_loop=5000,n_hist=100
     return green_record,normalized_data,bin_variance
 end
 
+function hist_measure_2!(diagram::Diagram,hist::Hist_Record,n_loop=5000,n_hist=10000,
+                        p_ins=0.2,p_rem=0.2,p_swap=0.2,p_to_0=0.2,p_from_0=1)
+
+    unnormalized_data=hist.unnormalized_data
+    normalized_data=hist.normalized_data
+    time_points=hist.time_points
+    bin_width=hist.bin_width
+    real_normalized=[p_ins,p_rem,p_swap,p_to_0]
+    real_normalized/=sum(real_normalized)
+    fake_normalized=[p_from_0]
+    fake_normalized/=sum(fake_normalized)
+    real_cumsum=cumsum(real_normalized)
+    fake_cumsum=cumsum(fake_normalized)
+    diagram.p_ins=real_normalized[1]
+    diagram.p_rem=real_normalized[2]
+    green_record=[]
+    zero_record=[]
+    regime=Diff_more()
+
+    println("begin")
+    for j in 1:n_loop
+        println("loop.number:",j)
+        for i in 1:n_hist
+            q=rand()
+            if diagram.order == 0
+                diagram.p_ins=fake_normalized[1]
+                insert_arc!(diagram,regime)
+                diagram.p_ins=real_normalized[1]
+            else
+                if q<real_cumsum[1]
+                    insert_arc!(diagram,regime)
+                elseif q<real_cumsum[2]
+                    if diagram.order != 1
+                        remove_arc!(diagram,regime) 
+                    end       
+                elseif q<real_cumsum[3]
+                    swap_arc!(diagram)
+                else
+                    if diagram.order == 1
+                        diagram.p_ins=fake_normalized[1]
+                        remove_arc!(diagram,regime)
+                        diagram.p_ins=real_normalized[1]
+                    end       
+                end
+            end
+            extend!(diagram)
+            unnormalized_data[diagram.order+1,Int(div(diagram.τ,bin_width,RoundUp))]+=1
+        end
+
+        
+        # normalized_data=hist.normalized_data
+        # green=normalized_data[1,:].*0
+        # for i in 1:diagram.max_order+1
+        #     green=green+normalized_data[i,:]
+        # end
+        green=unnormalized_data[1,:].*0
+        for i in 1:diagram.max_order+1
+            green=green+unnormalized_data[i,:]
+        end
+        push!(green_record,green)
+        push!(zero_record,unnormalized_data[1,:])
+    end
+
+    hist.normalized_data=normalization(unnormalized_data,bin_width,diagram)
+    normalized_data=hist.normalized_data
+    bin_variance=jackknife(green_record,zero_record,n_loop,diagram,bin_width,0.1)
+
+    return green_record,normalized_data,bin_variance
+end
+
+function hist_measure_3!(diagram::Diagram,hist::Hist_Record,n_loop=5000,n_hist=10000,
+                        p_ins=0.2,p_rem=0.2,p_to_0=0.2,p_from_0=1)
+
+    unnormalized_data=hist.unnormalized_data
+    normalized_data=hist.normalized_data
+    time_points=hist.time_points
+    bin_width=hist.bin_width
+    real_normalized=[p_ins,p_rem,p_to_0]
+    real_normalized/=sum(real_normalized)
+    fake_normalized=[p_from_0]
+    fake_normalized/=sum(fake_normalized)
+    real_cumsum=cumsum(real_normalized)
+    fake_cumsum=cumsum(fake_normalized)
+    diagram.p_ins=real_normalized[1]
+    diagram.p_rem=real_normalized[2]
+    green_record=[]
+    zero_record=[]
+    regime=Diff_more()
+
+    println("begin")
+    for j in 1:n_loop
+        println("loop.number:",j)
+        for i in 1:n_hist
+            q=rand()
+            if diagram.order == 0
+                diagram.p_ins=fake_normalized[1]
+                insert_arc!(diagram,regime)
+                diagram.p_ins=real_normalized[1]
+            else
+                if q<real_cumsum[1]
+                    insert_arc!(diagram,regime)
+                elseif q<real_cumsum[2]
+                    if diagram.order != 1
+                        remove_arc!(diagram,regime) 
+                    end       
+                else
+                    if diagram.order == 1
+                        diagram.p_ins=fake_normalized[1]
+                        remove_arc!(diagram,regime)
+                        diagram.p_ins=real_normalized[1]
+                    end       
+                end
+            end
+            extend!(diagram)
+            unnormalized_data[diagram.order+1,Int(div(diagram.τ,bin_width,RoundUp))]+=1
+        end
+
+        
+        # normalized_data=hist.normalized_data
+        # green=normalized_data[1,:].*0
+        # for i in 1:diagram.max_order+1
+        #     green=green+normalized_data[i,:]
+        # end
+        green=unnormalized_data[1,:].*0
+        for i in 1:diagram.max_order+1
+            green=green+unnormalized_data[i,:]
+        end
+        push!(green_record,green)
+        push!(zero_record,unnormalized_data[1,:])
+    end
+
+    hist.normalized_data=normalization(unnormalized_data,bin_width,diagram)
+    normalized_data=hist.normalized_data
+    bin_variance=jackknife(green_record,zero_record,n_loop,diagram,bin_width,0.1)
+
+    return green_record,normalized_data,bin_variance
+end
+
+function hist_measure_4!(diagram::Diagram,hist::Hist_Record,n_loop=5000,n_hist=10000,
+                        p_ins=0.2,p_rem=0.2,p_from_0=1)
+
+    unnormalized_data=hist.unnormalized_data
+    normalized_data=hist.normalized_data
+    time_points=hist.time_points
+    bin_width=hist.bin_width
+    real_normalized=[p_ins,p_rem]
+    real_normalized/=sum(real_normalized)
+    fake_normalized=[p_from_0]
+    fake_normalized/=sum(fake_normalized)
+    real_cumsum=cumsum(real_normalized)
+    fake_cumsum=cumsum(fake_normalized)
+    diagram.p_ins=real_normalized[1]
+    diagram.p_rem=real_normalized[2]
+    green_record=[]
+    zero_record=[]
+    regime=Diff_more()
+
+    println("begin")
+    for j in 1:n_loop
+        println("loop.number:",j)
+        for i in 1:n_hist
+            q=rand()
+            if diagram.order == 0
+                diagram.p_ins=fake_normalized[1]
+                insert_arc!(diagram,regime)
+                diagram.p_ins=real_normalized[1]
+            else
+                if q<real_cumsum[1]
+                    insert_arc!(diagram,regime)      
+                else
+                    if diagram.order == 1
+                        diagram.p_ins=fake_normalized[1]
+                        remove_arc!(diagram,regime)
+                        diagram.p_ins=real_normalized[1]
+                    else
+                        remove_arc!(diagram,regime) 
+                    end       
+                end
+            end
+            extend!(diagram)
+            unnormalized_data[diagram.order+1,Int(div(diagram.τ,bin_width,RoundUp))]+=1
+        end
+
+        green=unnormalized_data[1,:].*0
+        for i in 1:diagram.max_order+1
+            green=green+unnormalized_data[i,:]
+        end
+        push!(green_record,green)
+        push!(zero_record,unnormalized_data[1,:])
+    end
+
+    hist.normalized_data=normalization(unnormalized_data,bin_width,diagram)
+    normalized_data=hist.normalized_data
+    bin_variance=jackknife(green_record,zero_record,n_loop,diagram,bin_width,0.1)
+
+    return green_record,normalized_data,bin_variance
+end
+
 function discrete_measure!(diagram::Diagram,discrete::Discrete_Record,n_loop=1000,n_hist=2000,
                             p_ins=0.2,p_rem=0.2,p_swap=0.2,p_to_0=0.2,p_from_0=0.5)
     

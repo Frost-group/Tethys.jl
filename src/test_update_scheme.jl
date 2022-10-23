@@ -17,12 +17,12 @@ begin
 end
 
 begin
-    green_record,green_func,variance=hist_measure!(diagram,hist,10000)#
+    green_record,green_func,variance=hist_measure_4!(diagram,hist,10000)#
     println("end")
 end
 
 begin
-    max_time=160
+    max_time=100
     plot(hist.time_points[1:max_time],sum(green_func[i,1:max_time] for i in 1:501),yscale=:log)
 end
 
@@ -45,7 +45,7 @@ end
 begin
     statis=hist.normalized_data
     min_time=Int(div(5,bin_width,RoundUp))
-    max_time=Int(div(10,bin_width,RoundUp))
+    max_time=Int(div(15,bin_width,RoundUp))
     time_1=collect(min_time:max_time)*bin_width.-(bin_width/2)
     data=[sum(statis[:,i]) for i in min_time:max_time]
 
@@ -72,11 +72,11 @@ end
 begin
     bin_width=hist.time_points[2]-hist.time_points[1]
     min_time=Int(div(5,bin_width,RoundUp))
-    max_time=Int(div(10,bin_width,RoundUp))
+    max_time=Int(div(15,bin_width,RoundUp))
     time_points=hist.time_points[min_time:max_time]
     statis=sum(green_func[i,:] for i in 1:max_order+1)
     y=log.(statis)[min_time:max_time]
-    w=1 ./variance[min_time:max_time]
+    w=1 ./(variance[min_time:max_time]./(statis[min_time:max_time]).^2)
     linear(t, p) = p[1].-p[2].*t
     p0=[0,(-α-1.26*(α/10)^2-μ)]
     fit = curve_fit(linear, time_points, y, w, p0)
@@ -147,8 +147,8 @@ end
 
 #μ test
 begin
-    n_loop=10000
-    num_samples=7
+    n_loop=12000
+    num_samples=5
     α_list=collect(1:num_samples)*0.3
     μ_list=-α_list.-1.26*(α_list./10).^2 .-0.5
     α=1.5
@@ -164,23 +164,28 @@ begin
 
     linear(t, p) = p[1].-p[2].*t
     bin_width=max_τ/300
-    min_time=Int(div(6,bin_width,RoundUp))
-    max_time=Int(div(10,bin_width,RoundUp))
+    min_time=Int(div(5,bin_width,RoundUp))
+    max_time=Int(div(15,bin_width,RoundUp))
 
     for i in 1:num_samples
         # α=α_list[i]
         μ=μ_list[i]
         hist=Hist_Record(300,max_τ,max_order)
         diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-        green_record,green_func,variance=hist_measure!(diagram,hist,n_loop)#
+        green_record,green_func,variance=hist_measure_3!(diagram,hist,n_loop)#
         println("end:",i)
 
         time_points=hist.time_points[min_time:max_time]
-        statis=green_record[n_loop]
+        # statis=green_record[n_loop]
+        # y=log.(statis)[min_time:max_time]
+        # w=1 ./variance[min_time:max_time]
+
+        statis=sum(green_func[i,:] for i in 1:max_order+1)
         y=log.(statis)[min_time:max_time]
-        w=1 ./variance[min_time:max_time]
+        w=1 ./(variance[min_time:max_time]./(statis[min_time:max_time]).^2)
+
         p0=[0,(-α-1.26*(α/10)^2-μ)]
-        fit = curve_fit(linear, time_points, y, p0)
+        fit = curve_fit(linear, time_points, y, w, p0)
         errors=standard_errors(fit)
         append!(energy_record,fit.param[2]+μ)
         append!(E_error_record,errors[2])

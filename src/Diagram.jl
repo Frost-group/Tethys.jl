@@ -84,6 +84,15 @@ function green_zero(line::Line)
     return exp(-τ*(norm(p)^2/(2m)-μ))
 end
 
+function dispersion(line::Line)
+    p=line.k
+    τ=line.period[2]-line.period[1]
+    μ=line.μ
+    m=line.mass
+
+    return -τ*(norm(p)^2/(2m)-μ)
+end
+
 function phonon_propagator(arc::Arc)
     p=arc.q
     τ=arc.period[2]-arc.period[1]
