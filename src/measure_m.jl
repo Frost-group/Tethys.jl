@@ -68,10 +68,11 @@ begin
 end
 
 begin
-    quadratic(t, p) = p[1].*t.*t .+ p[2].*t .+ p[3]
+    quadratic(t, p) = p[1].*t.*t .+ p[3]
     p0=[1,0.1,-1]
     fit = curve_fit(quadratic, p_list, energy_record[sortperm(order_correction)], p0)
     plot(p_list,energy_record[sortperm(order_correction)],yerr=E_error_record,xlabel="p",ylabel="Energy",title="Dispersion",label="DiagMC")
-    display(plot!(p_list,linear(p_list,fit.param)))
+    #display()
+    display(plot!(p_list,quadratic(p_list,fit.param)))
 end
 

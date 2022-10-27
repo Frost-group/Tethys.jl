@@ -3,7 +3,7 @@ using Logging
 using Statistics
 
 begin
-    n_loop=10000
+    n_loop=1000
     α=1.5
     μ=-1.7
     num_mea=1; regime=Diff_more();
@@ -15,7 +15,7 @@ begin
 
     hist=Hist_Record(300,max_τ,max_order)
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-    green_record,green_func,variance=hist_measure_3!(diagram,hist,n_loop)
+    green_record,green_func,variance=hist_measure_4!(diagram,hist,n_loop)
     @info "End of loop"
 
     time_points=hist.time_points[min_time:max_time]
@@ -31,7 +31,7 @@ begin
 
     plot(collect(0: length(green_record)-1),acf)
 
-    sum_threshold = Int(10000)
+    sum_threshold = Int(1000)
     ict = 1+2*sum(acf[1:sum_threshold])
     ref_ict = 5*ict
 
