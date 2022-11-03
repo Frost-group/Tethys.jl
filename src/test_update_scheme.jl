@@ -4,6 +4,7 @@ include("measure.jl")
 using Random
 using LsqFit
 using JLD2
+using Logging
 
 
 begin
@@ -18,7 +19,7 @@ end
 
 begin
     green_record,green_func,variance=hist_measure_4!(diagram,hist,10000)#
-    println("end")
+    @info "End of sampling"
 end
 
 begin

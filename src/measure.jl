@@ -129,21 +129,23 @@ function jackknife(green_record,zero_record,n_loop,diagram,binwidth,ratio=0.1)
 
 end
 
-function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,n_loop=5000,n_hist=100000,
+function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, store_data=true, n_hist=100000,
                         p_ins=0.2,p_rem=0.2,p_from_0=1)
 
-    address=joinpath(folder,"α="*string(round(diagram.α,digits=3)),
-                    "k="*string(round(diagram.p[1],digits=3)),
-                    "μ="*string(round(diagram.μ,digits=3)),
-                    "histnum="*string(n_hist))
-    mkpath(address)
-    
+    if store_data
+        address=joinpath(folder,"α="*string(round(diagram.α,digits=3)),
+                        "k="*string(round(diagram.p[1],digits=3)),
+                        "μ="*string(round(diagram.μ,digits=3)),
+                        "histnum="*string(n_hist))
+        mkpath(address)
+        
 
-    if isfile(joinpath(address,"diagram.jld2")) && isfile(joinpath(address,"hist.jld2"))
-        diagram=load(joinpath(address,"diagram.jld2"), "diagram_a")
-        hist=load(joinpath(address,"hist.jld2"), "hist_a")
-        # @load joinpath(address,"diagram.jld2") diagram_a
-        # @load joinpath(address,"hist.jld2") hist_a
+        if isfile(joinpath(address,"diagram.jld2")) && isfile(joinpath(address,"hist.jld2"))
+            diagram=load(joinpath(address,"diagram.jld2"), "diagram_a")
+            hist=load(joinpath(address,"hist.jld2"), "hist_a")
+            # @load joinpath(address,"diagram.jld2") diagram_a
+            # @load joinpath(address,"hist.jld2") hist_a
+        end
     end
 
     # diagram=diagram_a
@@ -151,12 +153,14 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,n_loop=5000,n_h
     unnormalized_data=hist.unnormalized_data
     normalized_data=hist.normalized_data
 
-    previous_data_0=copy(unnormalized_data[1,:])
-    green=unnormalized_data[1,:].*0
-    for i in 1:diagram.max_order+1
-        green=green+unnormalized_data[i,:]
+    if store_data
+        previous_data_0=copy(unnormalized_data[1,:])
+        green=unnormalized_data[1,:].*0
+        for i in 1:diagram.max_order+1
+            green=green+unnormalized_data[i,:]
+        end
+        previous_data_t=green
     end
-    previous_data_t=green
 
     time_points=hist.time_points
     bin_width=hist.bin_width
@@ -203,10 +207,12 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,n_loop=5000,n_h
             green=green+unnormalized_data[i,:]
         end
 
-        CSV.write(joinpath(address,"total_green.csv"), DataFrame(transpose(hcat(green-previous_data_t)), :auto),append = true)
-        previous_data_t=copy(green)
-        CSV.write(joinpath(address,"zero_green.csv"), DataFrame(transpose(hcat(unnormalized_data[1,:]-previous_data_0)), :auto),append = true)
-        previous_data_0=copy(unnormalized_data[1,:])
+        if store_data
+            CSV.write(joinpath(address,"total_green.csv"), DataFrame(transpose(hcat(green-previous_data_t)), :auto),append = true)
+            previous_data_t=copy(green)
+            CSV.write(joinpath(address,"zero_green.csv"), DataFrame(transpose(hcat(unnormalized_data[1,:]-previous_data_0)), :auto),append = true)
+            previous_data_0=copy(unnormalized_data[1,:])
+        end
 
         push!(green_record,green)
         push!(zero_record,unnormalized_data[1,:])
@@ -216,8 +222,10 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,n_loop=5000,n_h
     normalized_data=hist.normalized_data
     bin_variance=jackknife(green_record,zero_record,n_loop,diagram,bin_width,0.1)
 
-    save(joinpath(address,"diagram.jld2"), "diagram_a", diagram)
-    save(joinpath(address,"hist.jld2"), "hist_a", hist)
+    if store_data
+        save(joinpath(address,"diagram.jld2"), "diagram_a", diagram)
+        save(joinpath(address,"hist.jld2"), "hist_a", hist)
+    end
     # @save joinpath(address,"diagram.jld2") diagram_a=diagram
     # @save joinpath(address,"hist.jld2") hist_a=hist
 

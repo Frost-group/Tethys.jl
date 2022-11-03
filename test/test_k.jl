@@ -1,4 +1,5 @@
-using Tethys
+using .Tethys
+#include("../src/Tethys.jl")
 using Random
 using LsqFit
 using Plots
@@ -34,7 +35,7 @@ begin
         μ=μ_list[i]
         hist=Hist_Record(300,max_τ,max_order)
         diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",n_loop)#
+        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"D://data",n_loop)#
         println("end:",i)
 
         time_points=hist.time_points[min_time:max_time]
@@ -47,7 +48,7 @@ begin
         fit = curve_fit(linear, time_points, y, w, p0)
         errors=standard_errors(fit)
 
-        append!(scanned_k,k)
+        append!(scanned_k,p)
         append!(energyk_record,fit.param[2]+μ)
         append!(Ek_error_record,errors[2])
 
@@ -56,7 +57,7 @@ begin
         append!(Zk_error_record,z0*errors[1])
         plot(time_points,y)
         display(plot!(time_points,linear(time_points,fit.param),
-        xlabel="τ",ylabel="log(green)",title="α="*string(α)*",k="*string(k)*",μ="*string(μ)))
+        xlabel="τ",ylabel="log(green)",title="α="*string(α)*",k="*string(p)*",μ="*string(μ)))
         # n_loop+=500
         println("energy:",fit.param[2]+μ)
         println("perturb:",(p^2)/(2*(1+α/6))-α-1.26*(α/10)^2)
