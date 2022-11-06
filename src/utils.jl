@@ -97,3 +97,7 @@ begin
     plot(scanned_α,energy_record,yerr=E_error_record,xlabel="α",ylabel="Energy",label="DiagMC")
     plot!(scanned_α,-scanned_α.-1.26*(scanned_α./10).^2,xlabel="α",ylabel="Energy",label="Pertub")
 end
+
+begin
+    plot(scanned_α,z0_record,yerr=Z_error_record,xlabel="α",ylabel="Z_0",label="DiagMC")
+end
