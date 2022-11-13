@@ -35,7 +35,11 @@ begin
         μ=μ_list[i]
         hist=Hist_Record(300,max_τ,max_order)
         diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
+<<<<<<< HEAD
         diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"D://data",n_loop)#
+=======
+        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",true,n_loop)#
+>>>>>>> featureClaus
         println("end:",i)
 
         time_points=hist.time_points[min_time:max_time]
@@ -70,12 +74,14 @@ begin
 end
 
 begin 
-    plot(k_list_1,energyk_record_1,yerr=Ek_error_record_1,xlabel="k",ylabel="Energy",label="DiagMC")
-    plot!(k_list_1,(k_list_1.^2)./(2*(1+α/6)) .+(-α-1.26*(α/10)^2),xlabel="k",ylabel="Energy",label="Parabolic")
+    plot(scanned_k,energyk_record,yerr=Ek_error_record,xlabel="k",ylabel="Energy",label="DiagMC")
+    plot!(scanned_k,(scanned_k.^2)./(2*(1+α/6)) .+(-α-1.26*(α/10)^2),xlabel="k",ylabel="Energy",label="Parabolic",
+            title="α="*string(α)*" energy dispersion graph")
 end
 
 begin 
-    plot(k_list_1,zk_record_1,yerr=Zk_error_record_1,xlabel="k",ylabel="Z_k",label="DiagMC")
+    plot(scanned_k,zk_record,yerr=Zk_error_record,xlabel="k",ylabel="Z_k",label="DiagMC",
+        title="α="*string(α)*" quasi weight graph")
 end
 
 # begin
@@ -161,3 +167,11 @@ end
 # begin 
 #     plot(k_list_1,zk_record_1,yerr=Zk_error_record_1,xlabel="k",ylabel="Z_k",label="DiagMC")
 # end
+
+begin
+    using DataFrames
+    a=[[1,2],[3,4]]
+    # a=[hcat(i) for i in a]
+    a=reshape(a, length(a), 1)
+    a=DataFrame(a, :auto)
+end

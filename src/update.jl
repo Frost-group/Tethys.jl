@@ -44,14 +44,14 @@ function p_update!(diagram::Diagram)
 end
 
 
-function insert_arc!(diagram::Diagram,regime::Diff_more)
+function insert_arc!(diagram::Diagram,order,μ,ω,α_squared)
 
-    order=diagram.order
-    m=diagram.mass
-    μ=diagram.μ
-    ω=diagram.ω
-    α=diagram.α
-    α_squared=2pi*α*sqrt(2)
+    # order=diagram.order
+    # m=diagram.mass
+    # μ=diagram.μ
+    # ω=diagram.ω
+    # α=diagram.α
+    # α_squared=2pi*α*sqrt(2)
     τ=diagram.τ
 
     if order+1>diagram.max_order
@@ -203,14 +203,14 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     end
 end
 
-function remove_arc!(diagram::Diagram,regime::Diff_more)
+function remove_arc!(diagram::Diagram,order,μ,ω,α_squared)
 
-    order=diagram.order
-    m=diagram.mass
-    μ=diagram.μ
-    ω=diagram.ω
-    α=diagram.α
-    α_squared=2pi*α*sqrt(2)
+    # order=diagram.order
+    # m=diagram.mass
+    # μ=diagram.μ
+    # ω=diagram.ω
+    # α=diagram.α
+    # α_squared=2pi*α*sqrt(2)
 
     if order-1<0
         return false
