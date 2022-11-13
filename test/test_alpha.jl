@@ -13,10 +13,10 @@ begin
 end
 
 begin
-    n_loop=15000
+    n_loop=10
     num_samples=30
-    α_list=collect(0:num_samples-1)*0.25.+0.1
-    μ_list=-α_list.-1.26*(α_list./10).^2 .-0.3
+    α_list=collect(26:26)*0.25.+0.1#num_samples-1 21 22
+    μ_list=-α_list.-1.26*(α_list./10).^2 .-0.8
     # α=1.5
     # μ_list=-(1.7 .+collect(0:num_samples-1).*0.1)
     num_mea=1; regime=Diff_more();
@@ -31,9 +31,15 @@ begin
     for i in 1:num_samples
         α=α_list[i]
         μ=μ_list[i]
+        # if i==22
+        #     μ-=0.1
+        # end
+        # if i>22
+        #     μ-=0.2
+        # end
         hist=Hist_Record(300,max_τ,max_order)
         diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",n_loop)#
+        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",true,n_loop)#
         println("end:",i)
 
         time_points=hist.time_points[min_time:max_time]
@@ -64,7 +70,7 @@ end
 
 begin 
     plot(scanned_α,energy_record,yerr=E_error_record,xlabel="α",ylabel="Energy",label="DiagMC")
-    plot!(scanned_α,-α_list.-1.26*(α_list./10).^2,xlabel="α",ylabel="Energy",label="Pertub")
+    plot!(scanned_α,-scanned_α.-1.26*(scanned_α./10).^2,xlabel="α",ylabel="Energy",label="Pertub")
 end
 
 begin 
