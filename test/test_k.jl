@@ -35,11 +35,7 @@ begin
         μ=μ_list[i]
         hist=Hist_Record(300,max_τ,max_order)
         diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-<<<<<<< HEAD
         diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"D://data",n_loop)#
-=======
-        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",true,n_loop)#
->>>>>>> featureClaus
         println("end:",i)
 
         time_points=hist.time_points[min_time:max_time]

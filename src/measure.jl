@@ -129,6 +129,14 @@ function jackknife(green_record,zero_record,n_loop,diagram,binwidth,ratio=0.1)
 
 end
 
+function loop_verbose(loop_number, frequency=10)
+    if loop_number%frequency != 0
+        return false
+    else
+        @info "loop.number:"*string(loop_number)
+    end
+end
+
 function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, store_data=true, n_hist=100000,
                         p_ins=0.2,p_rem=0.2,p_from_0=1)
 
@@ -185,24 +193,25 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
 
     println("begin")
     for j in 1:n_loop
-        println("loop.number:",j)
+        loop_verbose(j)
+        #println("loop.number:",j)
         for i in 1:n_hist
             q=rand()
             order=diagram.order
             if order == 0
                 diagram.p_ins=fake_normalized[1]
-                insert_arc!(diagram,order,μ,ω,α_squared)
+                insert_arc!(diagram,order,m,μ,ω,α_squared)
                 diagram.p_ins=real_normalized[1]
             else
                 if q<real_cumsum[1]
-                    insert_arc!(diagram,order,μ,ω,α_squared)      
+                    insert_arc!(diagram,order,m,μ,ω,α_squared)
                 else
                     if order == 1
                         diagram.p_ins=fake_normalized[1]
-                        remove_arc!(diagram,order,μ,ω,α_squarede)
+                        remove_arc!(diagram,order,m,μ,ω,α_squared)
                         diagram.p_ins=real_normalized[1]
                     else
-                        remove_arc!(diagram,order,μ,ω,α_squared) 
+                        remove_arc!(diagram,order,m,μ,ω,α_squared) 
                     end       
                 end
             end
@@ -239,6 +248,118 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
 
     return diagram,hist,green_record,zero_record,normalized_data,bin_variance#
 end
+
+function hist_measure2!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, store_data=true, n_hist=100000,
+                        p_ins=0.2,p_rem=0.2,p_from_0=1)
+
+    if store_data
+        address=joinpath(folder,"α="*string(round(diagram.α,digits=3)),
+                        "k="*string(round(diagram.p[1],digits=3)),
+                        "μ="*string(round(diagram.μ,digits=3)),
+                        "histnum="*string(n_hist))
+        mkpath(address)
+        
+
+        if isfile(joinpath(address,"diagram.jld2")) && isfile(joinpath(address,"hist.jld2"))
+            diagram=load(joinpath(address,"diagram.jld2"), "diagram_a")
+            hist=load(joinpath(address,"hist.jld2"), "hist_a")
+            # @load joinpath(address,"diagram.jld2") diagram_a
+            # @load joinpath(address,"hist.jld2") hist_a
+        end
+    end
+
+    # diagram=diagram_a
+    # hist=hist_a
+    unnormalized_data=hist.unnormalized_data
+    normalized_data=hist.normalized_data
+
+    if store_data
+        previous_data_0=copy(unnormalized_data[1,:])
+        green=unnormalized_data[1,:].*0
+        for i in 1:diagram.max_order+1
+            green=green+unnormalized_data[i,:]
+        end
+        previous_data_t=green
+    end
+
+    time_points=hist.time_points
+    bin_width=hist.bin_width
+    real_normalized=[p_ins,p_rem]
+    real_normalized/=sum(real_normalized)
+    fake_normalized=[p_from_0]
+    fake_normalized/=sum(fake_normalized)
+    real_cumsum=cumsum(real_normalized)
+    fake_cumsum=cumsum(fake_normalized)
+    diagram.p_ins=real_normalized[1]
+    diagram.p_rem=real_normalized[2]
+    green_record=[]
+    zero_record=[]
+    regime=Diff_more()
+
+    order=diagram.order
+    m=diagram.mass
+    μ=diagram.μ
+    ω=diagram.ω
+    α=diagram.α
+    α_squared=2pi*α*sqrt(2)
+
+    #println("begin")
+    for j in 1:n_loop
+        #println("loop.number:",j)
+        for i in 1:n_hist
+            q=rand()
+            order=diagram.order
+            if order == 0
+                diagram.p_ins=fake_normalized[1]
+                insert_arc!(diagram,regime)
+                diagram.p_ins=real_normalized[1]
+            else
+                if q<real_cumsum[1]
+                    insert_arc!(diagram,regime)      
+                else
+                    if order == 1
+                        diagram.p_ins=fake_normalized[1]
+                        remove_arc!(diagram,regime)
+                        diagram.p_ins=real_normalized[1]
+                    else
+                        remove_arc!(diagram,regime)
+                    end       
+                end
+            end
+            extend!(diagram)
+            unnormalized_data[order+1,Int(div(diagram.τ,bin_width,RoundUp))]+=1
+        end
+
+        green=unnormalized_data[1,:].*0
+        for i in 1:diagram.max_order+1
+            green=green+unnormalized_data[i,:]
+        end
+
+        if store_data
+            CSV.write(joinpath(address,"total_green.csv"), DataFrame(transpose(hcat(green-previous_data_t)), :auto),append = true)
+            previous_data_t=copy(green)
+            CSV.write(joinpath(address,"zero_green.csv"), DataFrame(transpose(hcat(unnormalized_data[1,:]-previous_data_0)), :auto),append = true)
+            previous_data_0=copy(unnormalized_data[1,:])
+        end
+
+        push!(green_record,green)
+        push!(zero_record,unnormalized_data[1,:])
+    end
+
+    hist.normalized_data=normalization(unnormalized_data,bin_width,diagram)
+    normalized_data=hist.normalized_data
+    #bin_variance=jackknife(green_record,zero_record,n_loop,diagram,bin_width,0.1)
+
+    if store_data
+        save(joinpath(address,"diagram.jld2"), "diagram_a", diagram)
+        save(joinpath(address,"hist.jld2"), "hist_a", hist)
+    end
+    # @save joinpath(address,"diagram.jld2") diagram_a=diagram
+    # @save joinpath(address,"hist.jld2") hist_a=hist
+
+    return diagram,hist,green_record,zero_record,normalized_data#,bin_variance#
+end
+
 
 function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,final_save::Bool,n_loop=5000,n_hist=100000,
                         p_ins=0.2,p_rem=0.2,p_from_0=1)
@@ -297,18 +418,18 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,final_save::Boo
             order=diagram.order
             if diagram.order == 0
                 diagram.p_ins=fake_normalized[1]
-                insert_arc!(diagram,order,μ,ω,α_squared)
+                insert_arc!(diagram,order,m,μ,ω,α_squared)
                 diagram.p_ins=real_normalized[1]
             else
                 if q<real_cumsum[1]
-                    insert_arc!(diagram,order,μ,ω,α_squared)      
+                    insert_arc!(diagram,order,m,μ,ω,α_squared)      
                 else
                     if diagram.order == 1
                         diagram.p_ins=fake_normalized[1]
-                        remove_arc!(diagram,order,μ,ω,α_squared)
+                        remove_arc!(diagram,order,m,μ,ω,α_squared)
                         diagram.p_ins=real_normalized[1]
                     else
-                        remove_arc!(diagram,order,μ,ω,α_squared) 
+                        remove_arc!(diagram,order,m,μ,ω,α_squared) 
                     end       
                 end
             end

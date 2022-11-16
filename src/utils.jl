@@ -4,6 +4,12 @@ using DataFrames
 using JLD2,FileIO
 using LsqFit
 using Logging
+using PolaronMobility
+
+function VMC_energy(α)
+    v,w = feynmanvw(α)
+    return F(v,w,α)
+end
 
 function slicematrix(A::AbstractMatrix)
     return [A[i, :] for i in 1:size(A,1)]
@@ -49,7 +55,7 @@ function get_data(directory, α, k)
 end
 
 begin
-    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("F://data",1.2,0.0 )
+    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("F://data",1,0.0 )
 end
 
 
@@ -96,6 +102,7 @@ end
 begin
     plot(scanned_α,energy_record,yerr=E_error_record,xlabel="α",ylabel="Energy",label="DiagMC")
     plot!(scanned_α,-scanned_α.-1.26*(scanned_α./10).^2,xlabel="α",ylabel="Energy",label="Pertub")
+    plot!(scanned_α,VMC_energy.(scanned_α),xlabel="α",ylabel="Energy",label="VMC")
 end
 
 begin
