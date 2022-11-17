@@ -44,7 +44,7 @@ function p_update!(diagram::Diagram)
 end
 
 
-function insert_arc!(diagram::Diagram,order,μ,ω,α_squared)
+function insert_arc!(diagram::Diagram,order,m,μ,ω,α_squared)
 
     # order=diagram.order
     # m=diagram.mass
@@ -203,7 +203,7 @@ function insert_arc!(diagram::Diagram,order,μ,ω,α_squared)
     end
 end
 
-function remove_arc!(diagram::Diagram,order,μ,ω,α_squared)
+function remove_arc!(diagram::Diagram,order,m,μ,ω,α_squared)
 
     # order=diagram.order
     # m=diagram.mass

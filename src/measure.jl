@@ -187,18 +187,18 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,n_loop=5000,n_h
             order=diagram.order
             if order == 0
                 diagram.p_ins=fake_normalized[1]
-                insert_arc!(diagram,order,μ,ω,α_squared)
+                insert_arc!(diagram,order,m,μ,ω,α_squared)
                 diagram.p_ins=real_normalized[1]
             else
                 if q<real_cumsum[1]
-                    insert_arc!(diagram,order,μ,ω,α_squared)      
+                    insert_arc!(diagram,order,m,μ,ω,α_squared)      
                 else
                     if order == 1
                         diagram.p_ins=fake_normalized[1]
-                        remove_arc!(diagram,order,μ,ω,α_squarede)
+                        remove_arc!(diagram,order,m,μ,ω,α_squared)
                         diagram.p_ins=real_normalized[1]
                     else
-                        remove_arc!(diagram,order,μ,ω,α_squared) 
+                        remove_arc!(diagram,order,m,μ,ω,α_squared) 
                     end       
                 end
             end
@@ -289,18 +289,18 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,final_save::Boo
             order=diagram.order
             if diagram.order == 0
                 diagram.p_ins=fake_normalized[1]
-                insert_arc!(diagram,order,μ,ω,α_squared)
+                insert_arc!(diagram,order,m,μ,ω,α_squared)
                 diagram.p_ins=real_normalized[1]
             else
                 if q<real_cumsum[1]
-                    insert_arc!(diagram,order,μ,ω,α_squared)      
+                    insert_arc!(diagram,order,m,μ,ω,α_squared)      
                 else
                     if diagram.order == 1
                         diagram.p_ins=fake_normalized[1]
-                        remove_arc!(diagram,order,μ,ω,α_squared)
+                        remove_arc!(diagram,order,m,μ,ω,α_squared)
                         diagram.p_ins=real_normalized[1]
                     else
-                        remove_arc!(diagram,order,μ,ω,α_squared) 
+                        remove_arc!(diagram,order,m,μ,ω,α_squared) 
                     end       
                 end
             end

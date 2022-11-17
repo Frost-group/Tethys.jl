@@ -13,9 +13,9 @@ begin
 end
 
 begin
-    n_loop=15000
+    n_loop=20000
     num_samples=20
-    k_list=collect(0:num_samples-1)*0.15
+    k_list=collect(15:num_samples-1)*0.15
     α=1
     μ_list=(k_list.^2)./(2*(1+α/6)) .+(-α-1.26*(α/10)^2-0.3)
     # α=1.5
@@ -27,11 +27,11 @@ begin
     linear(t, p) = p[1].-p[2].*t
     bin_width=max_τ/300
     min_time=Int(div(5,bin_width,RoundUp))
-    max_time=Int(div(12,bin_width,RoundUp))
+    max_time=Int(div(10,bin_width,RoundUp))
 
     for i in 1:num_samples
         p=k_list[i]
-        μ=μ_list[i]
+        μ=-0.5
         hist=Hist_Record(300,max_τ,max_order)
         diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
         diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",true,n_loop)#
@@ -61,9 +61,9 @@ begin
         println("energy:",fit.param[2]+μ)
         println("perturb:",(p^2)/(2*(1+α/6))-α-1.26*(α/10)^2)
 
-        if i+1<=num_samples && fit.param[2]+μ<μ_list[i+1]
-            μ_list[i+1]=fit.param[2]+μ
-        end
+        # if i+1<=num_samples && fit.param[2]+μ<μ_list[i+1]
+        #     μ_list[i+1]=fit.param[2]+μ
+        # end
 
     end
 end
