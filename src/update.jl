@@ -480,12 +480,12 @@ function swap_arc!(diagram::Diagram)
     end
 end
 
-function extend!(diagram::Diagram)
+function extend!(diagram::Diagram, dispersion::Float64)
 
-    p=diagram.p
-    μ=diagram.μ
-    m=diagram.mass
-    dispersion=norm(p)^2/(2m)-μ
+    #p=diagram.p
+    #μ=diagram.μ
+    #m=diagram.mass
+    #dispersion=norm(p)^2/(2m)-μ
     line_box=diagram.line_box
     order=diagram.order
     line_end=line_box[2*order+1]

@@ -3,6 +3,7 @@ include("update.jl")
 using Random
 using CSV, DataFrames
 using JLD2,FileIO
+using Dates
 
 mutable struct Hist_Record
 
@@ -133,7 +134,9 @@ function loop_verbose(loop_number, frequency=10)
     if loop_number%frequency != 0
         return false
     else
-        @info "loop.number:"*string(loop_number)
+        @info "$(Dates.format(now(), "yyyy-mm-dd HH:MM:SS")) loop.number:"*string(loop_number)
+        #@info "$(now(UTC)) loop.number:"*string(loop_number)
+        #@info "loop.number:"*string(loop_number)
     end
 end
 
@@ -190,10 +193,13 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
     ω=diagram.ω
     α=diagram.α
     α_squared=2pi*α*sqrt(2)
+    p=diagram.p
+    dispersion_val = norm(p)^2/(2m)-μ
 
     println("begin")
     for j in 1:n_loop
         loop_verbose(j)
+        #diagram=Diagram(0, 30, 500, m, μ, ω, α)
         #println("loop.number:",j)
         for i in 1:n_hist
             q=rand()
@@ -215,9 +221,10 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
                     end       
                 end
             end
-            extend!(diagram)
+            extend!(diagram, dispersion_val)
             unnormalized_data[order+1,Int(div(diagram.τ,bin_width,RoundUp))]+=1
         end
+        #println(diagram.order)
 
         green=unnormalized_data[1,:].*0
         for i in 1:diagram.max_order+1
@@ -233,6 +240,7 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
 
         push!(green_record,green)
         push!(zero_record,unnormalized_data[1,:])
+        
     end
 
     hist.normalized_data=normalization(unnormalized_data,bin_width,diagram)
