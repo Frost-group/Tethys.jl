@@ -2,6 +2,7 @@ using Statistics
 using Plots
 using Distributions
 using LinearAlgebra
+using StaticArrays
 
 abstract type Propagator end
 
@@ -20,8 +21,8 @@ struct Diff_more <: Regime
 end
 
 mutable struct Arc <:Propagator
-    q :: Array{Float64}
-    period :: Array{Float64}
+    q :: MVector{3,Float64}
+    period :: MVector{2,Float64}
     ω :: Float64
     index_in :: Int64
     index_out :: Int64
@@ -29,8 +30,8 @@ end
 
 
 mutable struct Line <:Propagator
-    k :: Array{Float64}
-    period :: Array{Float64}
+    k :: MVector{3,Float64}
+    period :: MVector{2,Float64}
     mass::Float64
     μ::Float64
     index::Int64
@@ -44,7 +45,7 @@ mutable struct Diagram
     ω::Float64
     α::Float64
 
-    p :: Array{Float64}
+    p :: MVector{3,Float64}
     τ :: Float64
     max_τ :: Float64
     order :: Int64
@@ -83,6 +84,14 @@ function green_zero(line::Line)
 
     return exp(-τ*(norm(p)^2/(2m)-μ))
 end
+
+function fast_norm(A::MVector{3,Float64})
+    x = zero(eltype(A))
+    for v in A
+      x += v * v
+    end
+    x
+  end
 
 function dispersion(line::Line)
     p=line.k

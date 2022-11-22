@@ -34,7 +34,7 @@ begin
         μ=-0.5
         hist=Hist_Record(300,max_τ,max_order)
         diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",true,n_loop)#
+        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://swap_2",true,n_loop)#
         println("end:",i)
 
         time_points=hist.time_points[min_time:max_time]
