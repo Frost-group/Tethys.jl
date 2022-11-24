@@ -13,7 +13,7 @@ begin
 end
 
 begin
-    n_loop=10
+    n_loop=40000
     num_samples=30
     α_list=collect(26:26)*0.25.+0.1#num_samples-1 21 22
     μ_list=-α_list.-1.26*(α_list./10).^2 .-0.8
