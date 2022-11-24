@@ -27,6 +27,8 @@ begin
     @info string(diagram.τ)
     diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,directory,n_loop,store_data,n_hist)
 
+    #println(diagram.order)
+    #println(diagram.τ)
     time_points=hist.time_points[min_time:max_time]
 
     statis=sum(green_func[i,:] for i in 1:max_order+1)
@@ -52,6 +54,14 @@ end
 
 begin
     plot(hist.time_points,log.(statis))
+end
+
+begin
+    plot([0:1:1000;],log.(sum(green_func,dims=2)))
+end
+
+begin
+    plot([0:1:500;],log.(sum(normalized_data,dims=2)))
 end
 
 begin

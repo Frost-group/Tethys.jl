@@ -55,7 +55,7 @@ function get_data(directory, α, k)
 end
 
 begin
-    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("F://data",1,0.0 )
+    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("E://data",4.1,0.0 )
 end
 
 
