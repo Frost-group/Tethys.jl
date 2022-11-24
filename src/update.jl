@@ -44,14 +44,14 @@ function p_update!(diagram::Diagram)
 end
 
 
-function insert_arc!(diagram::Diagram,regime::Diff_more)
+function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Float64,α_squared::Float64)
 
-    order=diagram.order
-    m=diagram.mass
-    μ=diagram.μ
-    ω=diagram.ω
-    α=diagram.α
-    α_squared=2pi*α*sqrt(2)
+    # order=diagram.order
+    # m=diagram.mass
+    # μ=diagram.μ
+    # ω=diagram.ω
+    # α=diagram.α
+    # α_squared=2pi*α*sqrt(2)
     τ=diagram.τ
 
     if order+1>diagram.max_order
@@ -65,6 +65,10 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     τ_R=deepcopy(line.period[2])
     k_in=deepcopy(line.k)
 
+    #τ_L=line.period[1]
+    #τ_R=line.period[2]
+    #k_in=line.k
+
     τ_1=rand(Uniform(τ_L,τ_R))
     τ_2=τ_1-log(rand())/ω 
 
@@ -74,14 +78,15 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
 
     line.period[1]=τ_1
     arc_T=τ_2-τ_1
-    q=rand(Normal(0,sqrt(m/arc_T)),3)
+    q=MVector{3}(rand(Normal(0,sqrt(m/arc_T)),3))
     
-    w_x=1
-    w_y=1
-    total_dis=0
-    τ_R_2=0
+    w_x=1.0
+    w_y=1.0
+    total_dis=0.0
+    τ_R_2=0.0
     index_out=0
     k_out=0
+
 
     #not set covered yet
     for i in index_in:2order+1
@@ -97,6 +102,8 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
         else
             k_out=deepcopy(line_tem.k)
             τ_R_2=deepcopy(line_tem.period[2])
+            #k_out=line_tem.k
+            #τ_R_2=line_tem.period[2]
             line_tem.period[2]=τ_2
             total_dis+=dispersion(line_tem)
             #w_x*=green_zero(line_tem)
@@ -123,6 +130,7 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     # println("normal",normalization(τ,τ_R,τ_L,ω))
     # println("insert_r=",r)
     
+    #index_out_2 = index_out-2
 
     if r<rand()
         line_box[index_in].period[1]=τ_L
@@ -172,6 +180,7 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
             end
         end
 
+        #line_box_length = length(line_box)
         if length(line_box)>=index_out+1
             for i in index_out+1:length(line_box)
                 line_box[i].index=i
@@ -179,20 +188,22 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
         end
 
         for arc in diagram.arc_box
-            if arc.index_out<=index_in
+            arc_index_in = arc.index_in
+            arc_index_out = arc.index_out
+            if arc_index_out<=index_in
                 continue
-            elseif arc.index_in>=index_out-2
+            elseif arc_index_in>=index_out-2
                 arc.index_in+=2
                 arc.index_out+=2
-            elseif arc.index_in<index_in && arc.index_out>index_out-2
+            elseif arc_index_in<index_in && arc_index_out>index_out-2
                 arc.index_out+=2
-            elseif arc.index_in>=index_in && arc.index_out<=index_out-2
+            elseif arc_index_in>=index_in && arc_index_out<=index_out-2
                 arc.index_in+=1
                 arc.index_out+=1
-            elseif index_in<=arc.index_in<index_out-2
+            elseif index_in<=arc_index_in<index_out-2
                 arc.index_in+=1
                 arc.index_out+=2
-            elseif index_in<arc.index_out<=index_out-2
+            elseif index_in<arc_index_out<=index_out-2
                 arc.index_out+=1
             end
         end
@@ -203,14 +214,14 @@ function insert_arc!(diagram::Diagram,regime::Diff_more)
     end
 end
 
-function remove_arc!(diagram::Diagram,regime::Diff_more)
+function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Float64,α_squared::Float64)
 
-    order=diagram.order
-    m=diagram.mass
-    μ=diagram.μ
-    ω=diagram.ω
-    α=diagram.α
-    α_squared=2pi*α*sqrt(2)
+    # order=diagram.order
+    # m=diagram.mass
+    # μ=diagram.μ
+    # ω=diagram.ω
+    # α=diagram.α
+    # α_squared=2pi*α*sqrt(2)
 
     if order-1<0
         return false
@@ -321,26 +332,28 @@ function remove_arc!(diagram::Diagram,regime::Diff_more)
         end
 
         for arc in diagram.arc_box
-            if arc.index_out<=index_in
+            arc_index_in = arc.index_in
+            arc_index_out = arc.index_out
+            if arc_index_out<=index_in
                 continue
-            elseif arc.index_in>=index_out
+            elseif arc_index_in>=index_out
                 arc.index_in-=2
                 arc.index_out-=2
-            elseif arc.index_in<index_in && arc.index_out>index_out
+            elseif arc_index_in<index_in && arc_index_out>index_out
                 arc.index_out-=2
                 if arc.index_out-arc.index_in == 2
                     line_box[arc.index_in+1].covered=true
                 end
-            elseif arc.index_in>index_in && arc.index_out<index_out
+            elseif arc_index_in>index_in && arc_index_out<index_out
                 arc.index_in-=1
                 arc.index_out-=1
-            elseif index_in<arc.index_in<index_out
+            elseif index_in<arc_index_in<index_out
                 arc.index_in-=1
                 arc.index_out-=2
                 if arc.index_out-arc.index_in == 2
                     line_box[arc.index_in+1].covered=true
                 end
-            elseif index_in<arc.index_out<index_out
+            elseif index_in<arc_index_out<index_out
                 arc.index_out-=1
                 if arc.index_out-arc.index_in == 2
                     line_box[arc.index_in+1].covered=true
@@ -467,12 +480,12 @@ function swap_arc!(diagram::Diagram)
     end
 end
 
-function extend!(diagram::Diagram)
+function extend!(diagram::Diagram, dispersion::Float64)
 
-    p=diagram.p
-    μ=diagram.μ
-    m=diagram.mass
-    dispersion=norm(p)^2/(2m)-μ
+    #p=diagram.p
+    #μ=diagram.μ
+    #m=diagram.mass
+    #dispersion=norm(p)^2/(2m)-μ
     line_box=diagram.line_box
     order=diagram.order
     line_end=line_box[2*order+1]
