@@ -48,11 +48,11 @@ function main()
     p = parsed_args["k"]
     n_loop = parsed_args["sweeps"]
     directory = parsed_args["dir"]
+    store_data = parsed_args["save"]
 
     max_τ=30; max_order=500; mass=1; ω=1;
 
     n_hist = 100000
-    store_data = false
     hist=Hist_Record(300,max_τ,max_order)
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
     @info string(diagram.τ)

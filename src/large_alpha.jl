@@ -1,15 +1,16 @@
 include("Diagram.jl")
 include("update.jl")
 include("measure.jl")
+include("utils.jl")
 
 using Logging
 using BenchmarkTools
 using LsqFit
 
 begin
-    n_loop=100
+    n_loop=100000
     num_mea=1; regime=Diff_more();
-    p=0; max_τ=30; max_order=500; mass=1; ω=1;
+    p=0; max_τ=30; max_order=1000; mass=1; ω=1;
 
 
     linear(t, p) = p[1].-p[2].*t
@@ -17,11 +18,12 @@ begin
     min_time=Int(div(5,bin_width,RoundUp))
     max_time=Int(div(12,bin_width,RoundUp))
 
-    α=20
-    μ=-47
+    #α=1/(2sqrt(2)pi)
+    α=5
+    μ=-5.5
     n_hist = 100000
     directory = "D://data"
-    store_data = false
+    store_data = true
     hist=Hist_Record(300,max_τ,max_order)
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
     @info string(diagram.τ)
@@ -46,6 +48,41 @@ begin
     xlabel="τ",ylabel="log(green)",title="α="*string(α)*",k="*string(0)*",μ="*string(μ)))
     println("energy:",fit.param[2]+μ)
     println("perturb:",-α-1.26*(α/10)^2)
+end
+
+begin
+    statis=hist.normalized_data
+    max_orders=40
+    min_time=Int(div(5,bin_width,RoundUp))
+    max_time=Int(div(12,bin_width,RoundUp))
+    time_1=collect(min_time:max_time)*bin_width.-(bin_width/2)
+    plot(time_1,log.(statis[31,min_time:max_time]),label="order:"*string(30))#,yaxis=:log,ylim=(0,5000000))
+    for order in 32:max_orders+1
+        if order == max_orders+1
+            display(plot!(time_1,log.(statis[order,min_time:max_time]),label="order:"*string(order-1)))
+        else
+            plot!(time_1,log.(statis[order,min_time:max_time]),label="order:"*string(order-1))
+        end
+    end
+end
+
+begin
+    statis=hist.normalized_data
+    max_orders=20
+    time_1=hist.time_points
+    plot(time_1,log.(statis[1,:]),label="order:"*string(0))#,yaxis=:log,ylim=(0,5000000))
+    for order in 2:max_orders+1
+        if order == max_orders+1
+            display(plot!(time_1,log.(statis[order,:]),label="order:"*string(order-1)))
+        else
+            plot!(time_1,log.(statis[order,:]),label="order:"*string(order-1))
+        end
+    end
+end
+
+
+begin
+    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("D://data",2.0,0.0 )
 end
 
 begin

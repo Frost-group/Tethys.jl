@@ -7,7 +7,6 @@ using BenchmarkTools
 
 function insert_arc_benchmark(α, μ, inserts=1, p=0)
     max_τ=30; max_order=500; mass=1; ω=1;
-    regime=Diff_more()
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
     order=diagram.order
     m=mass
@@ -20,7 +19,7 @@ function insert_arc_benchmark(α, μ, inserts=1, p=0)
 end
 
 begin
-    t = @benchmark insert_arc_benchmark(5.0, -6,100)
+    t = @benchmark insert_arc_benchmark(5.0, -6,1)
 end
 
 function extend_benchmark(α, μ, p=0)
