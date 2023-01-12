@@ -8,7 +8,7 @@ using BenchmarkTools
 using LsqFit
 
 begin
-    n_loop=100000
+    n_loop=1000
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=1000; mass=1; ω=1;
 
@@ -19,15 +19,15 @@ begin
     max_time=Int(div(12,bin_width,RoundUp))
 
     #α=1/(2sqrt(2)pi)
-    α=5
-    μ=-5.5
+    α=1
+    μ=-1.1
     n_hist = 100000
     directory = "D://data"
-    store_data = true
+    store_data = false
     hist=Hist_Record(300,max_τ,max_order)
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
     @info string(diagram.τ)
-    diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,directory,n_loop,store_data,n_hist)
+    diagram,hist,green_record,zero_record,green_func,variance,test_data=hist_measure!(diagram,hist,directory,n_loop,store_data,n_hist)
 
     #println(diagram.order)
     #println(diagram.τ)
@@ -51,13 +51,19 @@ begin
 end
 
 begin
+    plot(hist.time_points,vec(sum(test_data, dims=1)),label=["new norm"])
+    display(plot!(hist.time_points,vec(sum(green_func, dims=1)), label=["old norm"]))
+
+end
+
+begin
     statis=hist.normalized_data
-    max_orders=40
+    max_orders=55
     min_time=Int(div(5,bin_width,RoundUp))
     max_time=Int(div(12,bin_width,RoundUp))
     time_1=collect(min_time:max_time)*bin_width.-(bin_width/2)
-    plot(time_1,log.(statis[31,min_time:max_time]),label="order:"*string(30))#,yaxis=:log,ylim=(0,5000000))
-    for order in 32:max_orders+1
+    plot(time_1,log.(statis[41,min_time:max_time]),label="order:"*string(40))#,yaxis=:log,ylim=(0,5000000))
+    for order in 42:max_orders+1
         if order == max_orders+1
             display(plot!(time_1,log.(statis[order,min_time:max_time]),label="order:"*string(order-1)))
         else
@@ -68,7 +74,7 @@ end
 
 begin
     statis=hist.normalized_data
-    max_orders=20
+    max_orders=1
     time_1=hist.time_points
     plot(time_1,log.(statis[1,:]),label="order:"*string(0))#,yaxis=:log,ylim=(0,5000000))
     for order in 2:max_orders+1
@@ -82,7 +88,7 @@ end
 
 
 begin
-    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("D://data",2.0,0.0 )
+    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("D://data",5.5,0.0 )
 end
 
 begin
@@ -90,6 +96,7 @@ begin
 end
 
 begin
+    statis=sum(normalized_data[i,:] for i in 1:max_order+1)
     plot(hist.time_points,log.(statis))
 end
 
@@ -104,8 +111,8 @@ end
 begin
     linear(t, p) = p[1].-p[2].*t
     bin_width=max_τ/300
-    min_time=Int(div(3,bin_width,RoundUp))
-    max_time=Int(div(15,bin_width,RoundUp))
+    min_time=Int(div(5,bin_width,RoundUp))
+    max_time=Int(div(12,bin_width,RoundUp))
     time_points=hist.time_points[min_time:max_time]
 
     statis=sum(green_func[i,:] for i in 1:max_order+1)

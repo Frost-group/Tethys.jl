@@ -4,6 +4,7 @@ using Random
 using CSV, DataFrames
 using JLD2,FileIO
 using Dates
+using LsqFit
 
 mutable struct Hist_Record
 
@@ -39,6 +40,39 @@ function normalization(data,bin_width,diagram::Diagram)
         normalized_data[i,:]=(data[i,:]).*factor./sum_zero
     end
 
+    return normalized_data
+end
+
+function normalization2(data,bin_width,diagram::Diagram,hist::Hist_Record)
+    p=diagram.p
+    μ=diagram.μ
+    α=diagram.α
+    m=diagram.mass
+    max_τ = diagram.max_τ
+    zeroth_order=deepcopy(data[1,:])
+
+    nth_order_total = sum(data, dims=2)
+    N_total = sum(nth_order_total, dims=1)
+
+    order_factor = nth_order_total/N_total
+
+    unnorm_green = sum(data, dims=1)
+    linear(t, p) = p[1].-p[2].*t
+    bin_width=max_τ/300
+    min_time=Int(div(5,bin_width,RoundUp))
+    max_time=Int(div(12,bin_width,RoundUp))
+
+    time_points=hist.time_points[min_time:max_time]
+
+    p0=[0,(-α-1.26*(α/10)^2-μ)]
+    y=log.(unnorm_green)[min_time:max_time]
+    fit = curve_fit(linear, time_points, y, p0)
+
+    z0=exp(fit.param[1])
+    plot(hist.time_points,vec(log.(unnorm_green)))
+    display(plot!(time_points,linear(hist.time_points,fit.param)))
+    factor = 1/z0
+    normalized_data = data*factor
     return normalized_data
 end
 
@@ -249,6 +283,7 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
     end
 
     hist.normalized_data=normalization(unnormalized_data,bin_width,diagram)
+    test_data = normalization2(unnormalized_data,bin_width,diagram,hist)
     normalized_data=hist.normalized_data
     bin_variance=jackknife(green_record,zero_record,n_loop,diagram,bin_width,0.1)
 
@@ -259,7 +294,7 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
     # @save joinpath(address,"diagram.jld2") diagram_a=diagram
     # @save joinpath(address,"hist.jld2") hist_a=hist
 
-    return diagram,hist,green_record,zero_record,normalized_data,bin_variance#
+    return diagram,hist,green_record,zero_record,normalized_data,bin_variance,test_data#
 end
 
 function hist_measure!(diagram::Diagram,hist::Hist_Record,folder,final_save::Bool,n_loop=5000,n_hist=100000,
