@@ -1,5 +1,5 @@
-NCPUS=8
-MEM=11800mb
+NCPUS=128
+MEM=256gb
 TIME="71:58:02"
 
 #!/bin/sh
