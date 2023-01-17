@@ -67,6 +67,13 @@ mutable struct Diagram
 
 end
 
+
+"""
+    green_zero(diagram::Diagram)
+
+Returns the zeroth order Green's function from the Diagram object
+
+"""
 function green_zero(diagram::Diagram)
     p=diagram.p
     τ=diagram.τ
@@ -76,6 +83,13 @@ function green_zero(diagram::Diagram)
     return exp(-τ*(norm(p)^2/(2m)-μ))
 end
 
+"""
+    green_zero(line::Line)
+
+Returns the zeroth order Green's function from the Line object
+
+"""
+
 function green_zero(line::Line)
     p=line.k
     τ=line.period[2]-line.period[1]
@@ -84,6 +98,15 @@ function green_zero(line::Line)
 
     return exp(-τ*(norm(p)^2/(2m)-μ))
 end
+
+
+"""
+    fast_norm(A::MVector{3,Float64})
+
+Returns the normalisation squared of the 3 component vector.
+An alternative to the default norm() function without the square root (improves speed).
+
+"""
 
 function fast_norm(A::MVector{3,Float64})
     x = zero(eltype(A))

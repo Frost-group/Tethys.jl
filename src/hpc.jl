@@ -4,6 +4,14 @@ include("measure.jl")
 
 using ArgParse
 
+"""
+    parse_commandline()
+
+Parses input arguments from the command line to specify the simulation parameters.
+Used for HPC and Archer2 job commands.
+
+"""
+
 function parse_commandline()
     s = ArgParseSettings()
 

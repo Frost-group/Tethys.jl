@@ -46,12 +46,6 @@ end
 
 function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Float64,α_squared::Float64)
 
-    # order=diagram.order
-    # m=diagram.mass
-    # μ=diagram.μ
-    # ω=diagram.ω
-    # α=diagram.α
-    # α_squared=2pi*α*sqrt(2)
     τ=diagram.τ
 
     if order+1>diagram.max_order
@@ -215,13 +209,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 end
 
 function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Float64,α_squared::Float64)
-
-    # order=diagram.order
-    # m=diagram.mass
-    # μ=diagram.μ
-    # ω=diagram.ω
-    # α=diagram.α
-    # α_squared=2pi*α*sqrt(2)
 
     if order-1<0
         return false
@@ -482,10 +469,6 @@ end
 
 function extend!(diagram::Diagram, dispersion::Float64)
 
-    #p=diagram.p
-    #μ=diagram.μ
-    #m=diagram.mass
-    #dispersion=norm(p)^2/(2m)-μ
     line_box=diagram.line_box
     order=diagram.order
     line_end=line_box[2*order+1]
