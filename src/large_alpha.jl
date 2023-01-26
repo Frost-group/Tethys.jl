@@ -8,7 +8,7 @@ using BenchmarkTools
 using LsqFit
 
 begin
-    n_loop=1000
+    n_loop=100
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=1000; mass=1; ω=1;
 
@@ -27,10 +27,9 @@ begin
     hist=Hist_Record(300,max_τ,max_order)
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
     @info string(diagram.τ)
-    diagram,hist,green_record,zero_record,green_func,variance,test_data=hist_measure!(diagram,hist,directory,n_loop,store_data,n_hist)
+    diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,directory,n_loop,store_data,n_hist)
 
-    #println(diagram.order)
-    #println(diagram.τ)
+ 
     time_points=hist.time_points[min_time:max_time]
 
     statis=sum(green_func[i,:] for i in 1:max_order+1)
