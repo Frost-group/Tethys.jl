@@ -217,10 +217,11 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
     τ_L=line_in.period[1]
 
-    if index_out==index_in || index_out-index_in==2
+    if index_out-index_in==2
         τ_R=line_out.period[2]
-    elseif index_out-index_in < 0
-        τ_R=line_out.period[2]
+    elseif index_out==index_in
+        τ_L=line_box[index_in-1].period[1]
+        τ_R=line_box[index_in+1].period[2]
     else
         τ_R=line_box[index_in+1].period[2]
     end
@@ -243,9 +244,18 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         for i in [collect(1:index_out-1); collect(index_in+1:2order+1)]
             line_tem=line_box[i]
             total_dis+=dispersion(line_tem)
-            line_tem.index-=1
             line_tem.k+=q
             total_dis-=dispersion(line_tem)
+        end
+        for i in index_out:index_in
+            line_tem=line_box[i]
+            line_tem.index-=1
+        end
+        for i in index_in+1:2order+1
+            line_tem=line_box[i]
+            line_tem.index-=2
+        end
+            
     end
 
     τ_1=arc.period[1]
@@ -258,11 +268,26 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     r=((2*pi)^3*p_x_y*norm(arc.q)^2)/(exp(total_dis)*p_y_x*α_squared)
 
     if r<rand()
-        for i in index_in+1:index_out-1
-            line_tem=line_box[i]
-            line_tem.index+=1
-            line_tem.k-=q
-        end
+        if index_out-index_in >= 0
+            for i in index_in+1:index_out-1
+                line_tem=line_box[i]
+                line_tem.index+=1
+                line_tem.k-=q
+            end
+        else
+            for i in [collect(1:index_out-1); collect(index_in+1:2order+1)]
+                line_tem=line_box[i]
+                line_tem.k-=q
+            end
+            for i in index_out:index_in
+                line_tem=line_box[i]
+                line_tem.index+=1
+            end
+            for i in index_in+1:2order+1
+                line_tem=line_box[i]
+                line_tem.index+=2
+            end
+        end    
 
         return false
     else
