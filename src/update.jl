@@ -202,8 +202,10 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     index=rand(1:order)
     if index <= length(arc_box)
         arc=arc_box[index]
+        closed_arc = true
     else
-        arc=end_arc_box[index]
+        arc=end_arc_box[index-length(arc_box)]
+        closed_arc = false
     end
     index_in=arc.index_in
     index_out=arc.index_out
@@ -232,7 +234,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     w_x=1
     w_y=phonon_propagator(arc)*α_squared/(2*pi)^3
 
-    if index_out-index_in >= 0
+    if closed_arc
         for i in index_in+1:index_out-1
             line_tem=line_box[i]
             total_dis+=dispersion(line_tem)
@@ -268,7 +270,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     r=((2*pi)^3*p_x_y*norm(arc.q)^2)/(exp(total_dis)*p_y_x*α_squared)
 
     if r<rand()
-        if index_out-index_in >= 0
+        if closed_arc
             for i in index_in+1:index_out-1
                 line_tem=line_box[i]
                 line_tem.index+=1
@@ -293,34 +295,69 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     else
         sign_box=diagram.sign_box
         diagram.order-=1
-        deleteat!(arc_box, index)
-
-        if index_out-index_in==2
-            line_tem=line_box[index_in+1]
-            line_tem.period[1]=τ_L
-            line_tem.period[2]=τ_R_2
-            line_tem.covered=false
-            sign_to_add=[sign_box[index_in][1],sign_box[index_out][2]]
-            deleteat!(sign_box, index_in:index_out)
-            insert!(sign_box, index_in, sign_to_add)
-
+        if closed_arc
+            deleteat!(arc_box, index)
         else
-            line_tem=line_box[index_in+1]
-            line_tem.period[1]=τ_L
-            sign_to_add=[sign_box[index_in][1],sign_box[index_in+1][2]]
-            deleteat!(sign_box, index_in:index_in+1)
-            insert!(sign_box, index_in, sign_to_add)
-
-
-            line_tem=line_box[index_out-1]
-            line_tem.period[2]=τ_R_2
-            sign_to_add=[sign_box[index_out-2][1],sign_box[index_out-1][2]]
-            deleteat!(sign_box, index_out-2:index_out-1)
-            insert!(sign_box, index_out-2, sign_to_add)
-
+            deleteat!(end_arc_box, index-length(arc_box))
         end
 
-        deleteat!(line_box, [index_in,index_out])
+        if closed_arc
+            if index_out-index_in==2
+                line_tem=line_box[index_in+1]
+                line_tem.period[1]=τ_L
+                line_tem.period[2]=τ_R
+                line_tem.covered=false
+                sign_to_add=[sign_box[index_in][1],sign_box[index_out][2]]
+                deleteat!(sign_box, index_in:index_out)
+                insert!(sign_box, index_in, sign_to_add)
+
+            else
+                line_tem=line_box[index_in+1]
+                line_tem.period[1]=τ_L
+                sign_to_add=[sign_box[index_in][1],sign_box[index_in+1][2]]
+                deleteat!(sign_box, index_in:index_in+1)
+                insert!(sign_box, index_in, sign_to_add)
+
+
+                line_tem=line_box[index_out-1]
+                line_tem.period[2]=τ_R_2
+                sign_to_add=[sign_box[index_out-2][1],sign_box[index_out-1][2]]
+                deleteat!(sign_box, index_out-2:index_out-1)
+                insert!(sign_box, index_out-2, sign_to_add)
+
+            end
+        else
+            if index_out == index_in
+                line_tem=line_box[index_in]
+                line_tem.period[1]=τ_L
+                line_tem.period[2]=τ_R
+                line_tem.covered=false
+                sign_to_add=[sign_box[index_out-1][1],sign_box[index_in+1][2]]
+                deleteat!(sign_box, index_out-1:index_in+1)
+                insert!(sign_box, index_out-1, sign_to_add)
+
+            else
+                line_tem=line_box[index_in]
+                line_tem.period[1]=τ_L
+                line_tem.period[2]=τ_R
+                sign_to_add=[sign_box[index_in][1],sign_box[index_in+1][2]]
+                deleteat!(sign_box,index_in:index_in+1)
+                insert!(sign_box, index_in, sign_to_add)
+
+                line_tem=line_box[index_out]
+                line_tem.period[1]=line_box[index_out-1].period[1]
+                sign_to_add=[sign_box[index_out-1][1],sign_box[index_out][2]]
+                deleteat!(sign_box,index_out-1:index_out)
+                insert!(sign_box, index_out-1, sign_to_add)
+
+            end
+        end
+
+        if closed_arc
+            deleteat!(line_box, [index_in,index_out])
+        else
+            deleteat!(line_box, [index_in+1, index_out-1])
+        end
 
         if length(line_box)>=index_out+1
             for i in index_out+1:length(line_box)
