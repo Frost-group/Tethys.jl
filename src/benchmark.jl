@@ -58,7 +58,7 @@ begin
 end
 
 function measure_loop(α, μ, p=0)
-    n_loop=1
+    n_loop=100
     num_mea=1; regime=Diff_more();
     max_τ=30; max_order=500; mass=1; ω=1;
 

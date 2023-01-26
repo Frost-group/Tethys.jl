@@ -46,12 +46,6 @@ end
 
 function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Float64,α_squared::Float64)
 
-    # order=diagram.order
-    # m=diagram.mass
-    # μ=diagram.μ
-    # ω=diagram.ω
-    # α=diagram.α
-    # α_squared=2pi*α*sqrt(2)
     τ=diagram.τ
 
     if order+1>diagram.max_order
@@ -64,10 +58,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     τ_L=deepcopy(line.period[1])
     τ_R=deepcopy(line.period[2])
     k_in=deepcopy(line.k)
-
-    #τ_L=line.period[1]
-    #τ_R=line.period[2]
-    #k_in=line.k
 
     τ_1=rand(Uniform(τ_L,τ_R))
     τ_2=τ_1-log(rand())/ω 
@@ -93,44 +83,29 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         line_tem=line_box[i]
         if line_tem.period[2]<τ_2
             total_dis+=dispersion(line_tem)
-            #w_x*=green_zero(line_tem)
             line_tem.k-=q
             line_tem.index+=1
             total_dis-=dispersion(line_tem)
-            #w_x/=green_zero(line_tem)
             continue
         else
             k_out=deepcopy(line_tem.k)
             τ_R_2=deepcopy(line_tem.period[2])
-            #k_out=line_tem.k
-            #τ_R_2=line_tem.period[2]
             line_tem.period[2]=τ_2
             total_dis+=dispersion(line_tem)
-            #w_x*=green_zero(line_tem)
             line_tem.k-=q
             line_tem.index+=1
             total_dis-=dispersion(line_tem)
-            #w_x/=green_zero(line_tem)
             index_out=i+2
             break
         end
     end
 
-    # println("index_in:",index_in)
-    # println("index_out",index_out-2)
     new_arc=Arc(q,[τ_1,τ_2],ω,index_in,index_out)
 
-    #w_y*=phonon_propagator(new_arc)*α_squared/(2*pi)^3
-    p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)#*ω*exp(-ω*arc_T)#/(1-exp(-ω*(τ-τ_1)))#
-    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5#/normalization(τ,τ_R,τ_L,ω)#*weighting/exp(-ω*τ_1)
-    # println("ratio=",line_length/(τ-τ_1))
+    p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)
+    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
     p_y_x=diagram.p_rem/(order+1)
-    #r=w_y*p_y_x/(w_x*p_x_y)
     r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
-    # println("normal",normalization(τ,τ_R,τ_L,ω))
-    # println("insert_r=",r)
-    
-    #index_out_2 = index_out-2
 
     if r<rand()
         line_box[index_in].period[1]=τ_L
@@ -180,7 +155,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
             end
         end
 
-        #line_box_length = length(line_box)
         if length(line_box)>=index_out+1
             for i in index_out+1:length(line_box)
                 line_box[i].index=i
@@ -216,13 +190,6 @@ end
 
 function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Float64,α_squared::Float64)
 
-    # order=diagram.order
-    # m=diagram.mass
-    # μ=diagram.μ
-    # ω=diagram.ω
-    # α=diagram.α
-    # α_squared=2pi*α*sqrt(2)
-
     if order-1<0
         return false
     end
@@ -234,15 +201,10 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     index_out=arc.index_out
     q=arc.q
 
-    # if index_out-index_in>2
-    #     return false
-    # end
-
-    # old_box=deepcopy(diagram.line_box)
     line_box=diagram.line_box
     line_in=line_box[index_in]
     line_out=line_box[index_out]
-    # line_to_rem=[line_box[index_in],line_box[index_in+1],line_box[index_in+2]]
+
 
     τ_L=line_in.period[1]
 
@@ -253,7 +215,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     end
 
     τ_R_2=line_out.period[2]
-    # new_line=Line(line_in.k ,[τ_L,τ_R], m, μ, index_in,false)
     
     total_dis=0
     w_x=1
@@ -262,28 +223,21 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     for i in index_in+1:index_out-1
         line_tem=line_box[i]
         total_dis+=dispersion(line_tem)
-        #w_y*=green_zero(line_tem)
         line_tem.index-=1
         line_tem.k+=q
         total_dis-=dispersion(line_tem)
-        #w_y/=green_zero(line_tem)
+
     end
 
     τ_1=arc.period[1]
     τ_2=arc.period[2]
     arc_T=τ_2-τ_1
-    p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)#*ω*exp(-ω*arc_T)#/(1-exp(-ω*(diagram.τ-τ_1)))#/(2order-1)*(τ_R_2-line_box[index_out-1].period[1])/(diagram.τ-τ_1)#diagram.τ#
-    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5#/normalization(diagram.τ,τ_R,τ_L,ω)
-    # p_x_y*=exp(-ω*line_box[index_out-1].period[1])-exp(-ω*τ_R_2)
-    # p_x_y/=exp(-ω*τ_1)
+    p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)
+    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
+
 
     p_y_x=diagram.p_rem/order
     r=((2*pi)^3*p_x_y*norm(arc.q)^2)/(exp(total_dis)*p_y_x*α_squared)
-    #r=(w_x*p_x_y)/(w_y*p_y_x)#^2
-    # println("remove_r=",r)
-    # vertex=4*pi*α*ω^1.5/sqrt(2m)
-    # r=sqrt(m/(2*pi*arc_T))^3*vertex*(2order-1)*(τ_R-τ_L)*diagram.p_rem/diagram.p_ins*exp(arc_T*dot(q,line_in.k)/m)/(ω*(order)*norm(q)^2)
-    # r=1/r
 
     if r<rand()
         for i in index_in+1:index_out-1
@@ -291,7 +245,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
             line_tem.index+=1
             line_tem.k-=q
         end
-        # diagram.line_box=old_box
         return false
     else
         sign_box=diagram.sign_box
@@ -306,21 +259,18 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
             sign_to_add=[sign_box[index_in][1],sign_box[index_out][2]]
             deleteat!(sign_box, index_in:index_out)
             insert!(sign_box, index_in, sign_to_add)
-            # line_box[index_in+1]=line_tem
         else
             line_tem=line_box[index_in+1]
             line_tem.period[1]=τ_L
             sign_to_add=[sign_box[index_in][1],sign_box[index_in+1][2]]
             deleteat!(sign_box, index_in:index_in+1)
             insert!(sign_box, index_in, sign_to_add)
-            # line_box[index_in+1]=line_tem
 
             line_tem=line_box[index_out-1]
             line_tem.period[2]=τ_R_2
             sign_to_add=[sign_box[index_out-2][1],sign_box[index_out-1][2]]
             deleteat!(sign_box, index_out-2:index_out-1)
             insert!(sign_box, index_out-2, sign_to_add)
-            # line_box[index_in+1]=line_tem
         end
 
         deleteat!(line_box, [index_in,index_out])
@@ -482,10 +432,6 @@ end
 
 function extend!(diagram::Diagram, dispersion::Float64)
 
-    #p=diagram.p
-    #μ=diagram.μ
-    #m=diagram.mass
-    #dispersion=norm(p)^2/(2m)-μ
     line_box=diagram.line_box
     order=diagram.order
     line_end=line_box[2*order+1]
