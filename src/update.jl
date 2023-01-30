@@ -359,40 +359,71 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
             deleteat!(line_box, [index_in+1, index_out-1])
         end
 
-        if length(line_box)>=index_out+1
-            for i in index_out+1:length(line_box)
-                line_box[i].index=i
-            end
+        for i in 1:length(line_box)
+            line_box[i].index=i
         end
 
-        for arc in diagram.arc_box
-            arc_index_in = arc.index_in
-            arc_index_out = arc.index_out
-            if arc_index_out<=index_in
-                continue
-            elseif arc_index_in>=index_out
-                arc.index_in-=2
-                arc.index_out-=2
-            elseif arc_index_in<index_in && arc_index_out>index_out
-                arc.index_out-=2
-                if arc.index_out-arc.index_in == 2
-                    line_box[arc.index_in+1].covered=true
-                end
-            elseif arc_index_in>index_in && arc_index_out<index_out
-                arc.index_in-=1
-                arc.index_out-=1
-            elseif index_in<arc_index_in<index_out
-                arc.index_in-=1
-                arc.index_out-=2
-                if arc.index_out-arc.index_in == 2
-                    line_box[arc.index_in+1].covered=true
-                end
-            elseif index_in<arc_index_out<index_out
-                arc.index_out-=1
-                if arc.index_out-arc.index_in == 2
-                    line_box[arc.index_in+1].covered=true
+        if closed_arc
+            for arc in diagram.arc_box
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_out<=index_in
+                    continue
+                elseif arc_index_in>=index_out
+                    arc.index_in-=2
+                    arc.index_out-=2
+                elseif arc_index_in<index_in && arc_index_out>index_out
+                    arc.index_out-=2
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                elseif arc_index_in>index_in && arc_index_out<index_out
+                    arc.index_in-=1
+                    arc.index_out-=1
+                elseif index_in<arc_index_in<index_out
+                    arc.index_in-=1
+                    arc.index_out-=2
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                elseif index_in<arc_index_out<index_out
+                    arc.index_out-=1
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
                 end
             end
+        else
+            for arc in diagram.arc_box
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_out < index_out
+                    continue
+                elseif arc_index_in > index_in
+                    arc.index_in-=2
+                    arc.index_out-=2
+                elseif arc_index_in < index_out && arc_index_out > index_in
+                    arc.index_out-=2
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                elseif arc_index_in >= index_out && arc_index_out <= index_in
+                    arc.index_in-=1
+                    arc.index_out-=1
+                elseif index_out <= arc_index_in < index_in
+                    arc.index_in-=1
+                    arc.index_out-=2
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                elseif index_out < arc_index_out <= index_in
+                    arc.index_out-=1
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                end
+            end    
+
         end
 
         return true
