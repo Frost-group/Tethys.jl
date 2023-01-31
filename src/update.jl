@@ -422,8 +422,28 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                         line_box[arc.index_in+1].covered=true
                     end
                 end
-            end    
-
+            end
+            
+            for arc in diagram.end_arc_box
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_in < index_out
+                    continue
+                elseif arc_index_out > index_in
+                    arc.index_in-=2
+                    arc.index_out-=2
+                elseif arc_index_out < index_out && arc_index_in > index_in
+                    arc.index_out-=2
+                elseif arc_index_out > index_out && arc_index_in < index_in
+                    arc.index_in-=1
+                    arc.index_out-=1
+                elseif index_out < arc_index_out <= index_in
+                    arc.index_in-=2
+                    arc.index_out-=1
+                elseif index_out <= arc_index_in < index_in
+                    arc.index_in-=1
+                end
+            end
         end
 
         return true
