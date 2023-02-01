@@ -151,13 +151,9 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
         if isfile(joinpath(address,"diagram.jld2")) && isfile(joinpath(address,"hist.jld2"))
             diagram=load(joinpath(address,"diagram.jld2"), "diagram_a")
             hist=load(joinpath(address,"hist.jld2"), "hist_a")
-            # @load joinpath(address,"diagram.jld2") diagram_a
-            # @load joinpath(address,"hist.jld2") hist_a
         end
     end
 
-    # diagram=diagram_a
-    # hist=hist_a
     unnormalized_data=hist.unnormalized_data
     normalized_data=hist.normalized_data
 
@@ -196,26 +192,31 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
         loop_verbose(j)
         #println("loop.number:",j)
         for i in 1:n_hist
-            q=rand()
-            order=diagram.order
+            q=rand() 
             if order == 0
                 diagram.p_ins=fake_normalized[1]
                 insert_arc!(diagram,order,m,μ,ω,α_squared)
                 diagram.p_ins=real_normalized[1]
+            elseif  order == 1
+                if q<real_cumsum[1]
+                    insert_arc!(diagram,order,m,μ,ω,α_squared)      
+                else
+                    diagram.p_ins=fake_normalized[1]
+                    remove_arc!(diagram,order,m,μ,ω,α_squared)
+                    diagram.p_ins=real_normalized[1]
+                end
             else
                 if q<real_cumsum[1]
                     insert_arc!(diagram,order,m,μ,ω,α_squared)      
                 else
-                    if order == 1
-                        diagram.p_ins=fake_normalized[1]
-                        remove_arc!(diagram,order,m,μ,ω,α_squared)
-                        diagram.p_ins=real_normalized[1]
-                    else
-                        remove_arc!(diagram,order,m,μ,ω,α_squared) 
-                    end       
+                    remove_arc!(diagram,order,m,μ,ω,α_squared) 
                 end
+
+                #swap_arc!(diagram)
+
             end
             extend!(diagram)
+            order=diagram.order
             unnormalized_data[order+1,Int(div(diagram.τ,bin_width,RoundUp))]+=1
         end
 
@@ -243,8 +244,6 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
         save(joinpath(address,"diagram.jld2"), "diagram_a", diagram)
         save(joinpath(address,"hist.jld2"), "hist_a", hist)
     end
-    # @save joinpath(address,"diagram.jld2") diagram_a=diagram
-    # @save joinpath(address,"hist.jld2") hist_a=hist
 
     return diagram,hist,green_record,zero_record,normalized_data,bin_variance#
 end
@@ -263,13 +262,10 @@ function hist_measure2!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, 
         if isfile(joinpath(address,"diagram.jld2")) && isfile(joinpath(address,"hist.jld2"))
             diagram=load(joinpath(address,"diagram.jld2"), "diagram_a")
             hist=load(joinpath(address,"hist.jld2"), "hist_a")
-            # @load joinpath(address,"diagram.jld2") diagram_a
-            # @load joinpath(address,"hist.jld2") hist_a
+
         end
     end
 
-    # diagram=diagram_a
-    # hist=hist_a
     unnormalized_data=hist.unnormalized_data
     normalized_data=hist.normalized_data
 
