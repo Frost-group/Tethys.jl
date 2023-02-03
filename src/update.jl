@@ -392,9 +392,11 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     arc_box=diagram.arc_box
     end_arc_box = diagram.end_arc_box
     index=rand(1:order)
+    τ=0
     if index <= length(arc_box)
         arc=arc_box[index]
         closed_arc = true
+        τ=diagram.τ
     else
         arc=end_arc_box[index-length(arc_box)]
         closed_arc = false
@@ -422,9 +424,12 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
     τ_R_2=line_out.period[2]
     
+    τ_1=arc.period[1]
+    τ_2=arc.period[2]
+    arc_T=abs(τ-abs(τ_2-τ_1))
     total_dis=0
     w_x=1
-    w_y=phonon_propagator(arc)*α_squared/(2*pi)^3
+    w_y=exp(-ω*arc_T)*α_squared/(2*pi)^3/abs(q)^2
 
     if closed_arc
         for i in index_in+1:index_out-1
@@ -452,9 +457,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
             
     end
 
-    τ_1=arc.period[1]
-    τ_2=arc.period[2]
-    arc_T=abs(τ_2-τ_1)
+
     p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
 
