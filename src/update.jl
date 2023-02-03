@@ -160,7 +160,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
     p_y_x=diagram.p_rem/(order+1)
     r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
-
+    println("insert_r="*string(r))
     if r<rand()
         if !cross_over
             line_box[index_in].period[1]=τ_L
@@ -200,13 +200,19 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         return false
     else
+        println("yes_insert")
         diagram.order+=1
 
         if index_out-index_in==2
             line_box[index_in].covered=true
         else
-            line_box[index_in].covered=false
-            line_box[index_out-2].covered=false
+            if !cross_over
+                line_box[index_in].covered=false
+                line_box[index_out-2].covered=false
+            else
+                line_box[index_in-1].covered=false
+                line_box[index_out-1].covered=false
+            end
         end
 
         if !cross_over
@@ -221,9 +227,9 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                 line_tem=Line(k_in,[τ_L,τ_1], m, μ, index_in, false)
                 insert!(line_box, index_in, line_tem)
             else
-                line_tem=Line(k_out,[τ_L,τ_2], m, μ, index_in, false)
-                insert!(line_box, index_out-2, line_tem)
-                line_tem=Line(k_in,[τ_1,τ_R], m, μ, index_in, false)
+                line_tem=Line(k_out,[τ_L,τ_2], m, μ, index_in-1, false)
+                insert!(line_box, index_out-1, line_tem)
+                line_tem=Line(k_in,[τ_1,τ_R], m, μ, index_in+1, false)
                 insert!(line_box, index_in+1, line_tem)
             end
         end
@@ -254,7 +260,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
             sign_to_add=[[copy(sign_box[index_in-1][1]),1],[1,-1],[-1,copy(sign_box[index_in-1][2])]]
             deleteat!(sign_box, index_in-1)
             for i in 1:3
-                insert!(sign_box, index_in, sign_to_add[4-i])
+                insert!(sign_box, index_in-1, sign_to_add[4-i])
             end
 
         else
@@ -320,7 +326,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                     arc.index_in+=1
                 end
             end
-            push!(diagram.arc_box,new_arc)
         else
             for arc in diagram.arc_box
                 arc_index_in = arc.index_in
@@ -362,10 +367,17 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                     arc.index_out+=1
                     arc.index_in+=2
                 end
-                push!(diagram.end_arc_box,new_arc)
             end
-            
         end
+
+        if !cross_over
+            println("insert_arc")
+            push!(diagram.arc_box,new_arc)
+        else
+            println("insert_end_arc")
+            push!(diagram.end_arc_box,new_arc)
+        end
+
 
         return true
     end
