@@ -201,6 +201,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         return false
     else
         println("yes_insert")
+        println(index_in,index_out)
         diagram.order+=1
 
         if index_out-index_in==2
@@ -429,7 +430,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     arc_T=abs(τ-abs(τ_2-τ_1))
     total_dis=0
     w_x=1
-    w_y=exp(-ω*arc_T)*α_squared/(2*pi)^3/abs(q)^2
+    w_y=exp(-ω*arc_T)*α_squared/(2*pi)^3/norm(q)^2
 
     if closed_arc
         for i in index_in+1:index_out-1
@@ -488,6 +489,8 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         return false
     else
+        println("delete")
+        println(diagram.end_arc_box)
         sign_box=diagram.sign_box
         diagram.order-=1
         if closed_arc
@@ -551,7 +554,9 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         if closed_arc
             deleteat!(line_box, [index_in,index_out])
         else
-            deleteat!(line_box, [index_in+1, index_out-1])
+            println(string(index_in))
+            println(string(index_out))
+            deleteat!(line_box, [index_out-1, index_in+1])
         end
 
         for i in 1:length(line_box)
