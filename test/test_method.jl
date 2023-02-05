@@ -1,4 +1,4 @@
-using Tethys
+using .Tethys
 using Random
 using LsqFit
 using JLD2

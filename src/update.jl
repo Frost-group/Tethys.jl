@@ -490,7 +490,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         return false
     else
         println("delete")
-        println(diagram.end_arc_box)
         sign_box=diagram.sign_box
         diagram.order-=1
         if closed_arc
@@ -554,8 +553,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         if closed_arc
             deleteat!(line_box, [index_in,index_out])
         else
-            println(string(index_in))
-            println(string(index_out))
             deleteat!(line_box, [index_out-1, index_in+1])
         end
 
@@ -593,6 +590,28 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                     end
                 end
             end
+
+            for arc in diagram.end_arc_box
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_in < index_in
+                    continue
+                elseif arc_index_out > index_out
+                    arc.index_in-=2
+                    arc.index_out-=2
+                elseif arc_index_out <= index_in && arc_index_in >= index_out
+                    arc.index_in-=2
+                elseif arc_index_out > index_in && arc_index_in < index_out
+                    arc.index_in-=1
+                    arc.index_out-=1
+                elseif index_in < arc_index_out < index_out
+                    arc.index_out-=1
+                    arc.index_in-=2
+                elseif index_in < arc_index_in < index_out
+                    arc.index_in-=1
+                end
+            end
+
         else
             for arc in diagram.arc_box
                 arc_index_in = arc.index_in
@@ -633,7 +652,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                     arc.index_in-=2
                     arc.index_out-=2
                 elseif arc_index_out < index_out && arc_index_in > index_in
-                    arc.index_out-=2
+                    arc.index_in-=2
                 elseif arc_index_out > index_out && arc_index_in < index_in
                     arc.index_in-=1
                     arc.index_out-=1
