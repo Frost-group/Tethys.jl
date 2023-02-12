@@ -84,10 +84,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         #not set covered yet
         for i in index_in:2order+1
             line_tem=line_box[i]
-            total_dis+=dispersion(line_tem)
-            line_tem.k-=q
-            line_tem.index+=1
-            total_dis-=dispersion(line_tem)
             if line_tem.period[2]<τ_2
                 total_dis+=dispersion(line_tem)
                 line_tem.k-=q
@@ -119,9 +115,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         for i in 1:index_in
             line_tem=line_box[i]
-            total_dis+=dispersion(line_tem)
-            line_tem.k-=q
-            total_dis-=dispersion(line_tem)
 
             if line_tem.period[2]<τ_2
                 total_dis+=dispersion(line_tem)
@@ -160,7 +153,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
     p_y_x=diagram.p_rem/(order+1)
     r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
-    println("insert_r="*string(r))
+    #println("insert_r="*string(r))
+    #println(total_dis)
     if r<rand()
         if !cross_over
             line_box[index_in].period[1]=τ_L
@@ -175,6 +169,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                 line_box[index_in-1].period[1]=τ_L
                 line_box[index_out-1].period[2]=τ_R_2
                 for i in index_in-1:2order+1
+                    
                     line_tem=line_box[i]
                     line_tem.index=i
                     line_tem.k+=q
@@ -189,6 +184,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                 line_box[index_in-1].period[1]=τ_L
                 line_box[index_in-1].period[2]=τ_R
                 for i in 1:2order+1
+                    
                     line_tem=line_box[i]
                     line_tem.index=i
                     line_tem.k+=q
@@ -200,8 +196,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         return false
     else
-        println("yes_insert")
-        println(index_in,index_out)
         diagram.order+=1
 
         if index_out-index_in==2
@@ -279,10 +273,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         end
 
-        if length(line_box)>=index_out+1
-            for i in index_out+1:length(line_box)
-                line_box[i].index=i
-            end
+        for i in 1:length(line_box)
+            line_box[i].index=i
         end
 
         if !cross_over
@@ -372,10 +364,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         end
 
         if !cross_over
-            println("insert_arc")
             push!(diagram.arc_box,new_arc)
         else
-            println("insert_end_arc")
             push!(diagram.end_arc_box,new_arc)
         end
 
@@ -393,14 +383,16 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     arc_box=diagram.arc_box
     end_arc_box = diagram.end_arc_box
     index=rand(1:order)
+    #println(index)
     τ=0
     if index <= length(arc_box)
         arc=arc_box[index]
         closed_arc = true
-        τ=diagram.τ
+        
     else
         arc=end_arc_box[index-length(arc_box)]
         closed_arc = false
+        τ=diagram.τ
     end
     index_in=arc.index_in
     index_out=arc.index_out
@@ -463,7 +455,8 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
 
     p_y_x=diagram.p_rem/order
-    r=((2*pi)^3*p_x_y*norm(arc.q)^2)/(exp(total_dis)*p_y_x*α_squared)
+    r=((2*pi)^3*p_x_y*norm(q)^2)/(exp(total_dis)*p_y_x*α_squared)
+
 
     if r<rand()
         if closed_arc
@@ -489,7 +482,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         return false
     else
-        println("delete")
         sign_box=diagram.sign_box
         diagram.order-=1
         if closed_arc
@@ -707,12 +699,16 @@ function swap_arc!(diagram::Diagram)
 
     sign=diagram.sign_box[line_index]
     arc_box=diagram.arc_box
+    end_arc_box=diagram.end_arc_box
+    arc_box_length = length(arc_box)
     left_check=false
     right_check=false
+    left_open=false
+    right_open=false
     left_index=0
     right_index=0
 
-    for i in 1:order
+    for i in 1:arc_box_length
         arc=arc_box[i]
         if !left_check
             if arc_judge(arc,sign[1],false,line_index)
@@ -732,9 +728,45 @@ function swap_arc!(diagram::Diagram)
             break
         end
     end
+    for i in 1:length(end_arc_box)
+        arc=end_arc_box[i]
+        if !left_check
+            if arc_judge(arc,sign[1],false,line_index)
+                left_index=i
+                left_check=true
+                left_open=true
+            end
+        end
+
+        if !right_check
+            if arc_judge(arc,sign[2],true,line_index)
+                right_index=i
+                right_check=true
+                right_open=true
+            end
+        end
+
+        if right_check && left_check
+            break
+        end
+    end
+
+    if right_open && left_open && right_index == left_index
+        return false
+    end
+
     # println("swap_index is:",line_index)
-    arc_l=arc_box[left_index]
-    arc_r=arc_box[right_index]
+    if left_open
+        arc_l=end_arc_box[left_index]
+    else
+        arc_l=arc_box[left_index]
+    end
+
+    if right_open
+        arc_r=end_arc_box[right_index]
+    else
+        arc_r=arc_box[right_index]
+    end
 
     q1=arc_l.q
     q2=arc_r.q
@@ -768,10 +800,20 @@ function swap_arc!(diagram::Diagram)
         sign_box[line_index-1]=[sign_box[line_index-1][1],sign[2]]
         sign_box[line_index+1]=[sign[1],sign_box[line_index+1][2]]
 
-        deleteat!(arc_box, left_index)
-        insert!(arc_box, left_index, new_arc_l)
-        deleteat!(arc_box, right_index)
-        insert!(arc_box, right_index, new_arc_r)
+        if left_open
+            deleteat!(end_arc_box, left_index)
+            insert!(end_arc_box, left_index, new_arc_l)
+        else
+            deleteat!(arc_box, left_index)
+            insert!(arc_box, left_index, new_arc_l)
+        end
+        if right_open
+            deleteat!(end_arc_box, right_index)
+            insert!(end_arc_box, right_index, new_arc_r)
+        else
+            deleteat!(arc_box, right_index)
+            insert!(arc_box, right_index, new_arc_r)
+        end
 
         if new_arc_l.index_out-new_arc_l.index_in == 2
             line_box[new_arc_l.index_in+1].covered=true
@@ -802,6 +844,10 @@ function extend!(diagram::Diagram)
     if τ_new>diagram.max_τ
         return false
     end
+
+    #if τ_new<5.0
+    #    return false
+    #end
 
     line_end.period[2]=τ_new
     line_box[2*order+1]=line_end

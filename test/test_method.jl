@@ -1,14 +1,17 @@
-using .Tethys
+#using .Tethys
+include("../src/Diagram.jl")
+include("../src/update.jl")
+include("../src/measure.jl")
 using Random
 using LsqFit
 using JLD2
 
 begin
-    n_loop=200
+    n_loop=1000
     num_samples=20
     n_hist=100000
-    α=5
-    μ=-5.6
+    α=1
+    μ=-1.1
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=500; mass=1; ω=1;
 end
@@ -26,6 +29,10 @@ begin
     fake_cumsum=cumsum(fake_normalized)
     diagram.p_ins=real_normalized[1]
     diagram.p_rem=real_normalized[2]
+    num_bins=300
+    unnormalized_data=zeros(num_bins)
+    bin_width=max_τ/num_bins
+    weight_box = zeros(max_order)
 
 
     dia_order=diagram.order
@@ -39,7 +46,7 @@ begin
     for j in 1:n_loop
         println("loop.number:",j)
         for i in 1:n_hist
-            q=rand() 
+            q=rand()
             if dia_order == 0
                 diagram.p_ins=fake_normalized[1]
                 insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
@@ -59,8 +66,34 @@ begin
                     remove_arc!(diagram,dia_order,m,μ,ω,α_squared) 
                 end
             end
+            swap_arc!(diagram)
             extend!(diagram)
             dia_order=diagram.order
+            τ = diagram.τ
+            unnormalized_data[Int(div(τ, bin_width, RoundUp))]+=1
+            if τ>6
+                a = length(diagram.end_arc_box)
+                weight_box[a+1]+=1
+            end
         end
     end
+end
+
+begin
+    plot(weight_box/sum(weight_box), xlims=(0,10))
+end
+
+begin
+    time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
+    display(plot(time_points, log.(unnormalized_data), xlims=(0,15)))
+    linear(t, p) = p[1].-p[2].*t
+    min_time=Int(div(9,bin_width,RoundUp))
+    max_time=Int(div(14,bin_width,RoundUp))
+    time_points=time_points[min_time:max_time]
+    p0=[0,(-α-1.26*(α/10)^2-μ)]
+    y=log.(unnormalized_data[min_time:max_time])
+    fit = curve_fit(linear, time_points, y, p0)
+    println("energy:",fit.param[2]+μ)
+    println("perturb:",-α-1.26*(α/10)^2)
+
 end
