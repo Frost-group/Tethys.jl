@@ -1,4 +1,5 @@
 include("Diagram.jl")
+using Base.Threads
 
 function τ_update!(diagram::Diagram)
 
@@ -153,8 +154,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
     p_y_x=diagram.p_rem/(order+1)
     r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
-    #println("insert_r="*string(r))
-    #println(total_dis)
     if r<rand()
         if !cross_over
             line_box[index_in].period[1]=τ_L
@@ -382,15 +381,15 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     
     arc_box=diagram.arc_box
     end_arc_box = diagram.end_arc_box
+    arc_box_length = length(arc_box)
     index=rand(1:order)
-    #println(index)
     τ=0
-    if index <= length(arc_box)
+    if index <= arc_box_length
         arc=arc_box[index]
         closed_arc = true
         
     else
-        arc=end_arc_box[index-length(arc_box)]
+        arc=end_arc_box[index-arc_box_length]
         closed_arc = false
         τ=diagram.τ
     end
@@ -487,7 +486,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         if closed_arc
             deleteat!(arc_box, index)
         else
-            deleteat!(end_arc_box, index-length(arc_box))
+            deleteat!(end_arc_box, index-arc_box_length)
         end
 
         if closed_arc
@@ -708,7 +707,7 @@ function swap_arc!(diagram::Diagram)
     left_index=0
     right_index=0
 
-    for i in 1:arc_box_length
+    @threads for i in 1:arc_box_length
         arc=arc_box[i]
         if !left_check
             if arc_judge(arc,sign[1],false,line_index)
@@ -728,7 +727,7 @@ function swap_arc!(diagram::Diagram)
             break
         end
     end
-    for i in 1:length(end_arc_box)
+    @threads for i in 1:length(end_arc_box)
         arc=end_arc_box[i]
         if !left_check
             if arc_judge(arc,sign[1],false,line_index)

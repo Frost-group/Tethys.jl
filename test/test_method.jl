@@ -10,10 +10,10 @@ begin
     n_loop=1000
     num_samples=20
     n_hist=100000
-    α=1
-    μ=-1.1
+    α=17
+    μ=-1
     num_mea=1; regime=Diff_more();
-    p=0; max_τ=30; max_order=500; mass=1; ω=1;
+    p=0; max_τ=30; max_order=1000; mass=1; ω=1;
 end
 
 begin
@@ -67,7 +67,7 @@ begin
                 end
             end
             swap_arc!(diagram)
-            extend!(diagram)
+            #extend!(diagram)
             dia_order=diagram.order
             τ = diagram.τ
             unnormalized_data[Int(div(τ, bin_width, RoundUp))]+=1

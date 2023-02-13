@@ -102,6 +102,7 @@ function dispersion(line::Line)
     m=line.mass
 
     return -τ*(norm(p)^2/(2m)-μ)
+    #return -τ*(fast_norm(p)/(2m)-μ)
 end
 
 function phonon_propagator(arc::Arc)

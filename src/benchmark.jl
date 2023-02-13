@@ -1,26 +1,34 @@
-# include("Diagram.jl")
-# include("update.jl")
-# include("measure.jl")
-# include("Tethys.jl")
+include("Diagram.jl")
+include("update.jl")
+include("measure.jl")
 import Tethys
 using Random
 using Logging
 using BenchmarkTools
+using Profile
 
-function insert_arc_benchmark(α, μ, p=0)
-    max_τ=30; max_order=500; mass=1; ω=1;
+function insert_arc_benchmark(α, μ=-1.5, inserts=1, p=0)
+    max_τ=30; max_order=500; mass=1.0; ω=1.0;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
     order=diagram.order
-    m=diagram.mass
-    μ=diagram.μ
-    ω=diagram.ω
-    α=diagram.α
+    m=mass
     α_squared=2pi*α*sqrt(2)
-    insert_arc!(diagram,order,m,μ,ω,α_squared)
-    order=diagram.order
-    insert_arc!(diagram,order,m,μ,ω,α_squared)
-    order=diagram.order
-    insert_arc!(diagram,order,m,μ,ω,α_squared)
+    for i in 1:inserts
+        insert_arc!(diagram,order,mass, μ, ω, α_squared)
+        #swap_arc!(diagram)
+        #extend!(diagram)
+        order = diagram.order
+    end
+    remove_arc!(diagram,order,mass, μ, ω, α_squared)
+end
+
+begin
+    t = @benchmark insert_arc_benchmark(5.0,-6.0,10)
+end
+
+begin
+    @profile insert_arc_benchmark(5.0,-6.0,1)
+    Profile.print(format=:flat)
 end
 
 function insert_arc_2_benchmark(α, μ, p=0)
