@@ -8,26 +8,27 @@ using BenchmarkTools
 using Profile
 
 function insert_arc_benchmark(α, μ=-1.5, inserts=1, p=0)
-    max_τ=30; max_order=500; mass=1.0; ω=1.0;
+    max_τ=30; max_order=500; mass=1; ω=1;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
     order=diagram.order
     m=mass
     α_squared=2pi*α*sqrt(2)
     for i in 1:inserts
-        insert_arc!(diagram,order,mass, μ, ω, α_squared)
+        insert_arc2!(diagram,order,mass, μ, ω, α_squared)
+        order = diagram.order
         #swap_arc!(diagram)
         #extend!(diagram)
-        order = diagram.order
+        
     end
-    remove_arc!(diagram,order,mass, μ, ω, α_squared)
+    #remove_arc2!(diagram,order,mass, μ, ω, α_squared)
 end
 
 begin
-    t = @benchmark insert_arc_benchmark(5.0,-6.0,10)
+    t = @benchmark insert_arc_benchmark(5.0,-6.0,2000)
 end
 
 begin
-    @profile insert_arc_benchmark(5.0,-6.0,1)
+    @profile insert_arc_benchmark(5.0,-6.0,100)
     Profile.print(format=:flat)
 end
 

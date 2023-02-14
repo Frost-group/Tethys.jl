@@ -11,9 +11,9 @@ begin
     num_samples=20
     n_hist=100000
     α=17
-    μ=-1
+    μ=-34
     num_mea=1; regime=Diff_more();
-    p=0; max_τ=30; max_order=1000; mass=1; ω=1;
+    p=0; max_τ=300; max_order=2000; mass=1; ω=1;
 end
 
 begin
@@ -53,7 +53,7 @@ begin
                 diagram.p_ins=real_normalized[1]
             elseif  dia_order == 1
                 if q<real_cumsum[1]
-                    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)      
+                    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
                 else
                     diagram.p_ins=fake_normalized[1]
                     remove_arc!(diagram,dia_order,m,μ,ω,α_squared)
@@ -61,14 +61,14 @@ begin
                 end
             else
                 if q<real_cumsum[1]
-                    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)      
+                    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
                 else
-                    remove_arc!(diagram,dia_order,m,μ,ω,α_squared) 
+                    remove_arc!(diagram,dia_order,m,μ,ω,α_squared)
                 end
             end
-            swap_arc!(diagram)
-            #extend!(diagram)
             dia_order=diagram.order
+            swap_arc!(diagram)
+            extend!(diagram)
             τ = diagram.τ
             unnormalized_data[Int(div(τ, bin_width, RoundUp))]+=1
             if τ>6
@@ -80,12 +80,12 @@ begin
 end
 
 begin
-    plot(weight_box/sum(weight_box), xlims=(0,10))
+    plot(weight_box/sum(weight_box), xlims=(20,80))
 end
 
 begin
     time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
-    display(plot(time_points, log.(unnormalized_data), xlims=(0,15)))
+    display(plot(time_points, log.(unnormalized_data), xlims=(0,50)))
     linear(t, p) = p[1].-p[2].*t
     min_time=Int(div(9,bin_width,RoundUp))
     max_time=Int(div(14,bin_width,RoundUp))
