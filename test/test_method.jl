@@ -9,7 +9,7 @@ using JLD2
 begin
     n_loop=200000
     num_samples=20
-    n_hist=10000
+    n_hist=100000
     α=20
     μ=-47#9.2
     num_mea=1; regime=Diff_more();
@@ -70,9 +70,9 @@ begin
             end
             swap_arc!(diagram)
             dia_order=diagram.order
-            # scale!(diagram)
-            # τ=diagram.record_τ
-            # unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+            scale!(diagram,dia_order,m,μ,ω,1)
+            τ=diagram.record_τ[1]
+            unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
 
             component=length(diagram.end_arc_box)
             weight_box[component+1]+=1
@@ -82,10 +82,10 @@ end
 
 begin
     time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
-    display(plot(time_points,log.(unnormalized_data),xlims = (7.5,10)))
+    display(plot(time_points,log.(unnormalized_data),xlims = (0,20)))
     linear(t, p) = p[1].-p[2].*t
-    min_time=Int(div(8.5,bin_width,RoundUp))
-    max_time=Int(div(9,bin_width,RoundUp))
+    min_time=Int(div(11,bin_width,RoundUp))
+    max_time=Int(div(13,bin_width,RoundUp))
     p0=[0,(-α-1.26*(α/10)^2-μ)]
     y=log.(unnormalized_data)[min_time:max_time]
     time_points=time_points[min_time:max_time]

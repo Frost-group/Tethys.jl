@@ -33,8 +33,6 @@ end
 mutable struct Line <:Propagator
     k :: MVector{3,Float64}
     period :: MVector{2,Float64}
-    #mass::Float64
-    #μ::Float64
     index::Int64
     covered::Bool
 end
@@ -48,10 +46,11 @@ mutable struct Diagram
 
     p :: MVector{3,Float64}
     τ :: Float64
-    record_τ::Float64
+    record_τ::Array{Float64,1}
     max_τ :: Float64
     order :: Int64
     max_order :: Int64
+    total_dispersion :: Float64
     
     arc_box :: Array{Arc,1}
     end_arc_box :: Array{Arc,1}
@@ -63,9 +62,9 @@ mutable struct Diagram
 
     function Diagram(p::Real, max_τ::Real, max_order::Int64, mass::Int64, μ::Real, ω::Int64, α::Real, 
         p_ins::Float64=0.5, p_rem::Float64=0.5)
-        τ = 7.5#5/ω+rand()*max_τ
+        τ = 5.0#5/ω+rand()*max_τ
         #τ = 10.5
-        new(mass, μ, ω, α, [p,0,0], τ, τ, max_τ, 0, max_order, [], [],
+        new(mass, μ, ω, α, [p,0,0], τ, [], max_τ, 0, max_order, 0.0, [], [],
         [Line([p,0,0], [0, τ], 1,false)], [[0,0]],p_ins, p_rem)
     end
 
@@ -83,8 +82,6 @@ end
 function green_zero(line::Line, m::Int64, μ::Float64)
     p=line.k
     τ=line.period[2]-line.period[1]
-    #μ=line.μ
-    #m=line.mass
 
     return exp(-τ*(norm(p)^2/(2m)-μ))
 end
@@ -100,8 +97,6 @@ function fast_norm(A::MVector{3,Float64})
 function dispersion(line::Line, m::Int64, μ::Float64)
     p=line.k
     τ=line.period[2]-line.period[1]
-    #μ=line.μ
-    #m=line.mass
 
     return -τ*(norm(p)^2/(2m)-μ)
     #return -τ*(fast_norm(p)/(2m)-μ)
@@ -110,10 +105,16 @@ end
 function dispersion_vec(line_array::StructArray{Line}, m::Int64, μ::Float64)
     p=line_array.k
     τ=getindex.(line_array.period,2)-getindex.(line_array.period,1)
-    #μ=line_array.μ
-    #m=line_array.mass
 
     return -τ.*((p.⋅p)./(2m).-μ)
+end
+
+function arc_dispersion(arc::Arc, ω::Int64)
+    return -ω*(arc.period[2]-arc.period[1])
+end
+
+function end_arc_dispersion(arc::Arc, ω::Int64, τ::Float64)
+    return -ω*(τ+arc.period[2]-arc.period[1])
 end
 
 function phonon_propagator(arc::Arc)
