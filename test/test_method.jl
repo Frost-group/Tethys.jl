@@ -32,6 +32,7 @@ begin
     unnormalized_data=zeros(num_bins)
     bin_width=max_τ/num_bins
     weight_box = zeros(max_order)
+end
 
 begin
     #Random.seed!(13653)
@@ -69,12 +70,12 @@ begin
             end
             swap_arc!(diagram)
             dia_order=diagram.order
-            scale!(diagram)
-            τ=diagram.record_τ
-            unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+            # scale!(diagram)
+            # τ=diagram.record_τ
+            # unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
 
-            # component=length(diagram.end_arc_box)
-            # weight_box[component+1]+=1
+            component=length(diagram.end_arc_box)
+            weight_box[component+1]+=1
         end
     end
 end

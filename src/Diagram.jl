@@ -63,9 +63,9 @@ mutable struct Diagram
 
     function Diagram(p::Real, max_τ::Real, max_order::Int64, mass::Int64, μ::Real, ω::Int64, α::Real, 
         p_ins::Float64=0.5, p_rem::Float64=0.5)
-        τ = 5/ω+rand()*max_τ
+        τ = 7.5#5/ω+rand()*max_τ
         #τ = 10.5
-        new(mass, μ, ω, α, [p,0,0], τ, max_τ, 0, max_order, [], [],
+        new(mass, μ, ω, α, [p,0,0], τ, τ, max_τ, 0, max_order, [], [],
         [Line([p,0,0], [0, τ], 1,false)], [[0,0]],p_ins, p_rem)
     end
 
