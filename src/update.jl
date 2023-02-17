@@ -197,6 +197,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         return false
     else
         diagram.order+=1
+        diagram.dispersion-=total_dis
+        diagram.dispersion-=arc_T*ω 
 
         if index_out-index_in==2
             line_box[index_in].covered=true
@@ -367,6 +369,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             push!(diagram.arc_box,new_arc)
         else
             push!(diagram.end_arc_box,new_arc)
+            diagram.component+=1
         end
 
 
@@ -824,6 +827,9 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     else
         sign_box=diagram.sign_box
         diagram.order-=1
+        diagram.dispersion-=total_dis
+        diagram.dispersion+=arc_T*ω 
+
         if closed_arc
             deleteat!(arc_box, index)
         else
@@ -993,6 +999,8 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
                     arc.index_in-=1
                 end
             end
+
+            diagram.component-=1
         end
 
         return true
@@ -1421,6 +1429,7 @@ function swap_arc!(diagram::Diagram)
     if r<rand()
         return false
     else
+        diagram.dispersion+=log(r)
         deleteat!(line_box, line_index)
         insert!(line_box, line_index, new_line)
         sign_box=diagram.sign_box
@@ -1497,21 +1506,21 @@ function scale!(diagram::Diagram)
     ω=diagram.ω
     τ=diagram.τ
     record_τ=τ=diagram.record_τ
-    total_dis=0
+    total_dis=diagram.dispersion
 
-    for line in line_box
-        total_dis+=dispersion(line, m, μ)
-    end
+    # for line in line_box
+    #     total_dis+=dispersion(line, m, μ)
+    # end
 
-    for arc in arc_box
-        period=arc.period
-        total_dis+=-ω*(period[2]-period[1])
-    end
+    # for arc in arc_box
+    #     period=arc.period
+    #     total_dis+=-ω*(period[2]-period[1])
+    # end
 
-    for arc in end_arc_box
-        period=arc.period
-        total_dis+=-ω*(τ+period[2]-period[1])
-    end
+    # for arc in end_arc_box
+    #     period=arc.period
+    #     total_dis+=-ω*(τ+period[2]-period[1])
+    # end
 
     coef=-τ/total_dis
     #τ_new=-log(rand())/(guess_E-μ)

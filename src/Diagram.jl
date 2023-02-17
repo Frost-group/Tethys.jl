@@ -51,6 +51,7 @@ mutable struct Diagram
     record_τ::Float64
     max_τ :: Float64
     order :: Int64
+    component :: Int64
     max_order :: Int64
     
     arc_box :: Array{Arc,1}
@@ -60,15 +61,15 @@ mutable struct Diagram
 
     p_ins :: Float64
     p_rem :: Float64
+    dispersion :: Float64
 
     function Diagram(p::Real, max_τ::Real, max_order::Int64, mass::Int64, μ::Real, ω::Int64, α::Real, 
         p_ins::Float64=0.5, p_rem::Float64=0.5)
         τ = 7.5#5/ω+rand()*max_τ
         #τ = 10.5
-        new(mass, μ, ω, α, [p,0,0], τ, τ, max_τ, 0, max_order, [], [],
-        [Line([p,0,0], [0, τ], 1,false)], [[0,0]],p_ins, p_rem)
+        new(mass, μ, ω, α, [p,0,0], τ, τ, max_τ, 0, 0, max_order, [], [],
+        [Line([p,0,0], [0, τ], 1,false)], [[0,0]],p_ins, p_rem,-τ*(norm(p)^2/(2*mass)-μ))
     end
-
 end
 
 function green_zero(diagram::Diagram)

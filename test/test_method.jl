@@ -70,11 +70,11 @@ begin
             end
             swap_arc!(diagram)
             dia_order=diagram.order
-            # scale!(diagram)
-            # τ=diagram.record_τ
-            # unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+            scale!(diagram)
+            τ=diagram.record_τ
+            unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
 
-            component=length(diagram.end_arc_box)
+            component=diagram.component
             weight_box[component+1]+=1
         end
     end
