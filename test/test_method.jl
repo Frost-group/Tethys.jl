@@ -8,10 +8,10 @@ using JLD2
 
 begin
     n_loop=200000
-    num_samples=20
+    num_samples=15
     n_hist=10000
-    α=20
-    μ=-47#9.2
+    α=15#20
+    μ=-28#-47#9.2
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=1000; mass=1; ω=1;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
@@ -74,8 +74,8 @@ begin
             τ=diagram.record_τ
             unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
 
-            component=diagram.component
-            weight_box[component+1]+=1
+            # component=diagram.component
+            # weight_box[component+1]+=1
         end
     end
 end
@@ -84,8 +84,8 @@ begin
     time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
     display(plot(time_points,log.(unnormalized_data),xlims = (7.5,10)))
     linear(t, p) = p[1].-p[2].*t
-    min_time=Int(div(8.5,bin_width,RoundUp))
-    max_time=Int(div(9,bin_width,RoundUp))
+    min_time=Int(div(9,bin_width,RoundUp))
+    max_time=Int(div(10,bin_width,RoundUp))
     p0=[0,(-α-1.26*(α/10)^2-μ)]
     y=log.(unnormalized_data)[min_time:max_time]
     time_points=time_points[min_time:max_time]
@@ -106,5 +106,5 @@ begin
 end
 
 begin
-    plot(weight_box/sum(weight_box),xlims = (30,120),title="α="*string(α))
+    plot(weight_box/sum(weight_box),xlims = (30,70),title="α="*string(α))
 end

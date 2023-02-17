@@ -1505,9 +1505,9 @@ function scale!(diagram::Diagram)
     m=diagram.mass
     ω=diagram.ω
     τ=diagram.τ
-    record_τ=τ=diagram.record_τ
+    record_τ=diagram.record_τ
     total_dis=diagram.dispersion
-
+    
     # for line in line_box
     #     total_dis+=dispersion(line, m, μ)
     # end
