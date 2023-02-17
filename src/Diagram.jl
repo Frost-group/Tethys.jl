@@ -3,6 +3,7 @@ using Plots
 using Distributions
 using LinearAlgebra
 using StaticArrays
+using StructArrays
 
 abstract type Propagator end
 
@@ -23,7 +24,7 @@ end
 mutable struct Arc <:Propagator
     q :: MVector{3,Float64}
     period :: MVector{2,Float64}
-    ω :: Float64
+    ω :: Int64
     index_in :: Int64
     index_out :: Int64
 end
@@ -32,17 +33,17 @@ end
 mutable struct Line <:Propagator
     k :: MVector{3,Float64}
     period :: MVector{2,Float64}
-    mass::Float64
-    μ::Float64
+    #mass::Float64
+    #μ::Float64
     index::Int64
     covered::Bool
 end
 
 mutable struct Diagram
 
-    mass:: Float64
+    mass:: Int64
     μ::Float64
-    ω::Float64
+    ω::Int64
     α::Float64
 
     p :: MVector{3,Float64}
@@ -52,19 +53,20 @@ mutable struct Diagram
     order :: Int64
     max_order :: Int64
     
-    arc_box :: Array{Arc}
-    end_arc_box :: Array{Arc}
-    line_box:: Array{Line}
+    arc_box :: Array{Arc,1}
+    end_arc_box :: Array{Arc,1}
+    line_box:: Array{Line,1}
     sign_box:: Array{Array{Int64, 1}, 1}
 
     p_ins :: Float64
     p_rem :: Float64
 
-    function Diagram(p::Real, max_τ::Real, max_order::Int64, mass::Real, μ::Real, ω::Real, α::Real, 
+    function Diagram(p::Real, max_τ::Real, max_order::Int64, mass::Int64, μ::Real, ω::Int64, α::Real, 
         p_ins::Float64=0.5, p_rem::Float64=0.5)
-        τ = 7.5#5.5/ω+rand()*max_τ
-        new(mass, μ, ω, α, [p,0,0], τ,τ, max_τ, 0, max_order, [], [],
-        [Line([p,0,0], [0, τ], mass, μ, 1,false)], [[0,0]],p_ins, p_rem)
+        τ = 5/ω+rand()*max_τ
+        #τ = 10.5
+        new(mass, μ, ω, α, [p,0,0], τ, max_τ, 0, max_order, [], [],
+        [Line([p,0,0], [0, τ], 1,false)], [[0,0]],p_ins, p_rem)
     end
 
 end
@@ -78,11 +80,11 @@ function green_zero(diagram::Diagram)
     return exp(-τ*(norm(p)^2/(2m)-μ))
 end
 
-function green_zero(line::Line)
+function green_zero(line::Line, m::Int64, μ::Float64)
     p=line.k
     τ=line.period[2]-line.period[1]
-    μ=line.μ
-    m=line.mass
+    #μ=line.μ
+    #m=line.mass
 
     return exp(-τ*(norm(p)^2/(2m)-μ))
 end
@@ -95,13 +97,23 @@ function fast_norm(A::MVector{3,Float64})
     x
   end
 
-function dispersion(line::Line)
+function dispersion(line::Line, m::Int64, μ::Float64)
     p=line.k
     τ=line.period[2]-line.period[1]
-    μ=line.μ
-    m=line.mass
+    #μ=line.μ
+    #m=line.mass
 
     return -τ*(norm(p)^2/(2m)-μ)
+    #return -τ*(fast_norm(p)/(2m)-μ)
+end
+
+function dispersion_vec(line_array::StructArray{Line}, m::Int64, μ::Float64)
+    p=line_array.k
+    τ=getindex.(line_array.period,2)-getindex.(line_array.period,1)
+    #μ=line_array.μ
+    #m=line_array.mass
+
+    return -τ.*((p.⋅p)./(2m).-μ)
 end
 
 function phonon_propagator(arc::Arc)

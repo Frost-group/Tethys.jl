@@ -1,6 +1,7 @@
-include("Diagram.jl")
-include("update.jl")
-using Plots
+#using .Tethys
+include("../src/Diagram.jl")
+include("../src/update.jl")
+include("../src/measure.jl")
 using Random
 using LsqFit
 using JLD2
@@ -27,12 +28,10 @@ begin
     fake_cumsum=cumsum(fake_normalized)
     diagram.p_ins=real_normalized[1]
     diagram.p_rem=real_normalized[2]
-    #hist=Hist_Record(300,max_τ,max_order)
     num_bins=300
     unnormalized_data=zeros(num_bins)
     bin_width=max_τ/num_bins
-    weight_box=zeros(max_order)
-end
+    weight_box = zeros(max_order)
 
 begin
     #Random.seed!(13653)
@@ -48,14 +47,14 @@ begin
     for j in 1:n_loop
         println("loop.number:",j)
         for i in 1:n_hist
-            q=rand() 
+            q=rand()
             if dia_order == 0
                 diagram.p_ins=fake_normalized[1]
                 insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
                 diagram.p_ins=real_normalized[1]
             elseif  dia_order == 1
                 if q<real_cumsum[1]
-                    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)      
+                    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
                 else
                     diagram.p_ins=fake_normalized[1]
                     remove_arc!(diagram,dia_order,m,μ,ω,α_squared)
@@ -63,14 +62,14 @@ begin
                 end
             else
                 if q<real_cumsum[1]
-                    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)      
+                    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
                 else
-                    remove_arc!(diagram,dia_order,m,μ,ω,α_squared) 
+                    remove_arc!(diagram,dia_order,m,μ,ω,α_squared)
                 end
             end
             swap_arc!(diagram)
             dia_order=diagram.order
-            scale!(diagram,-26.0)
+            scale!(diagram)
             τ=diagram.record_τ
             unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
 
