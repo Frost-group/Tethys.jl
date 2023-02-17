@@ -84,10 +84,10 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         #not set covered yet
         for i in index_in:2order+1
             line_tem=line_box[i]
-            total_dis+=dispersion(line_tem)
-            line_tem.k-=q
-            line_tem.index+=1
-            total_dis-=dispersion(line_tem)
+            # total_dis+=dispersion(line_tem)
+            # line_tem.k-=q
+            # line_tem.index+=1
+            # total_dis-=dispersion(line_tem)
             if line_tem.period[2]<τ_2
                 total_dis+=dispersion(line_tem)
                 line_tem.k-=q
@@ -119,9 +119,9 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         for i in 1:index_in
             line_tem=line_box[i]
-            total_dis+=dispersion(line_tem)
-            line_tem.k-=q
-            total_dis-=dispersion(line_tem)
+            # total_dis+=dispersion(line_tem)
+            # line_tem.k-=q
+            # total_dis-=dispersion(line_tem)
 
             if line_tem.period[2]<τ_2
                 total_dis+=dispersion(line_tem)
@@ -159,8 +159,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
     p_y_x=diagram.p_rem/(order+1)
-    r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
-    println("insert_r="*string(r))
+    r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)#*(1-exp(-ω*τ))/ω
+    
     if r<rand()
         if !cross_over
             line_box[index_in].period[1]=τ_L
@@ -200,8 +200,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         return false
     else
-        println("yes_insert")
-        println(index_in,index_out)
+        #println("insert_r:"*string(r))
         diagram.order+=1
 
         if index_out-index_in==2
@@ -228,9 +227,9 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
                 line_tem=Line(k_in,[τ_L,τ_1], m, μ, index_in, false)
                 insert!(line_box, index_in, line_tem)
             else
-                line_tem=Line(k_out,[τ_L,τ_2], m, μ, index_in-1, false)
+                line_tem=Line(k_in-q,[τ_L,τ_2], m, μ, index_in-1, false)
                 insert!(line_box, index_out-1, line_tem)
-                line_tem=Line(k_in,[τ_1,τ_R], m, μ, index_in+1, false)
+                line_tem=Line(k_in-q,[τ_1,τ_R], m, μ, index_in+1, false)
                 insert!(line_box, index_in+1, line_tem)
             end
         end
@@ -372,10 +371,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
         end
 
         if !cross_over
-            println("insert_arc")
             push!(diagram.arc_box,new_arc)
         else
-            println("insert_end_arc")
             push!(diagram.end_arc_box,new_arc)
         end
 
@@ -397,11 +394,12 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     if index <= length(arc_box)
         arc=arc_box[index]
         closed_arc = true
-        τ=diagram.τ
     else
         arc=end_arc_box[index-length(arc_box)]
         closed_arc = false
+        τ=diagram.τ
     end
+
     index_in=arc.index_in
     index_out=arc.index_out
     q=arc.q
@@ -431,7 +429,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
     total_dis=0
     w_x=1
     w_y=exp(-ω*arc_T)*α_squared/(2*pi)^3/norm(q)^2
-
+    # println("τ"*string(τ))
     if closed_arc
         for i in index_in+1:index_out-1
             line_tem=line_box[i]
@@ -458,13 +456,13 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
             
     end
 
-
+    τ=diagram.τ
     p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
 
-    p_y_x=diagram.p_rem/order
+    p_y_x=diagram.p_rem/order#*(1-exp(-ω*τ))/ω
     r=((2*pi)^3*p_x_y*norm(arc.q)^2)/(exp(total_dis)*p_y_x*α_squared)
-
+    
     if r<rand()
         if closed_arc
             for i in index_in+1:index_out-1
@@ -489,7 +487,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Float64,μ::Float64,ω::Fl
 
         return false
     else
-        println("delete")
+        #println("delete_r:"*string(r))
         sign_box=diagram.sign_box
         diagram.order-=1
         if closed_arc
@@ -707,12 +705,15 @@ function swap_arc!(diagram::Diagram)
 
     sign=diagram.sign_box[line_index]
     arc_box=diagram.arc_box
+    end_arc_box=diagram.end_arc_box
     left_check=false
     right_check=false
+    left_open=false
+    right_open=false
     left_index=0
     right_index=0
 
-    for i in 1:order
+    for i in 1:length(arc_box)
         arc=arc_box[i]
         if !left_check
             if arc_judge(arc,sign[1],false,line_index)
@@ -732,9 +733,46 @@ function swap_arc!(diagram::Diagram)
             break
         end
     end
+
+    for i in 1:length(end_arc_box)
+        arc=end_arc_box[i]
+        if !left_check
+            if arc_judge(arc,sign[1],false,line_index)
+                left_index=i
+                left_check=true
+                left_open=true
+            end
+        end
+
+        if !right_check
+            if arc_judge(arc,sign[2],true,line_index)
+                right_index=i
+                right_check=true
+                right_open=true
+            end
+        end
+
+        if right_check && left_check
+            break
+        end
+    end
+
+    if right_open && left_open && right_index == left_index
+        return false
+    end
+
     # println("swap_index is:",line_index)
-    arc_l=arc_box[left_index]
-    arc_r=arc_box[right_index]
+    if left_open
+        arc_l=end_arc_box[left_index]
+    else
+        arc_l=arc_box[left_index]
+    end
+    
+    if right_open
+        arc_r=end_arc_box[right_index]
+    else
+        arc_r=arc_box[right_index]
+    end
 
     q1=arc_l.q
     q2=arc_r.q
@@ -768,10 +806,22 @@ function swap_arc!(diagram::Diagram)
         sign_box[line_index-1]=[sign_box[line_index-1][1],sign[2]]
         sign_box[line_index+1]=[sign[1],sign_box[line_index+1][2]]
 
-        deleteat!(arc_box, left_index)
-        insert!(arc_box, left_index, new_arc_l)
-        deleteat!(arc_box, right_index)
-        insert!(arc_box, right_index, new_arc_r)
+        if left_open
+            deleteat!(end_arc_box, left_index)
+            insert!(end_arc_box, left_index, new_arc_l)
+        else
+            deleteat!(arc_box, left_index)
+            insert!(arc_box, left_index, new_arc_l)
+        end
+
+        
+        if right_open
+            deleteat!(end_arc_box, right_index)
+            insert!(end_arc_box, right_index, new_arc_r)
+        else
+            deleteat!(arc_box, right_index)
+            insert!(arc_box, right_index, new_arc_r)
+        end
 
         if new_arc_l.index_out-new_arc_l.index_in == 2
             line_box[new_arc_l.index_in+1].covered=true
@@ -796,8 +846,7 @@ function extend!(diagram::Diagram)
     n_phonon=length(diagram.end_arc_box)
     dispersion=norm(p)^2/(2m)-μ+n_phonon*ω
 
-
-    τ_new=line_end.period[1]-log(rand())/abs(dispersion)
+    τ_new=line_end.period[1]-log(rand())/(dispersion)
 
     if τ_new>diagram.max_τ
         return false
@@ -807,6 +856,63 @@ function extend!(diagram::Diagram)
     line_box[2*order+1]=line_end
     diagram.τ=τ_new
 
+    return true
+
+end
+
+
+function scale!(diagram::Diagram)
+
+    line_box=diagram.line_box
+    order=diagram.order
+    arc_box=diagram.arc_box
+    end_arc_box=diagram.end_arc_box
+    μ=diagram.μ
+    m=diagram.mass
+    ω=diagram.ω
+    τ=diagram.τ
+    record_τ=τ=diagram.record_τ
+    total_dis=0
+
+    for line in line_box
+        total_dis+=dispersion(line)
+    end
+
+    for arc in arc_box
+        period=arc.period
+        total_dis+=-ω*(period[2]-period[1])
+    end
+
+    for arc in end_arc_box
+        period=arc.period
+        total_dis+=-ω*(τ+period[2]-period[1])
+    end
+
+    coef=-τ/total_dis
+    #τ_new=-log(rand())/(guess_E-μ)
+    τ_new=rand(Gamma(2*order+1,coef))
+    #println(coef)
+    
+    if τ_new>diagram.max_τ
+        return false
+    end
+
+    # #τ_new=(1+λ)*record_τ
+    # λ=τ_new/record_τ-1
+    # total_dis=total_dis*λ
+    # total_dis+=2*order*log(1+λ)
+    # println(2*order*log(1+λ))
+    
+    # total_dis+=(guess_E-μ)*(λ*record_τ)
+    # # y_x=exp((guess_E-μ)*(λ*record_τ))
+    # # x_y=exp(-(guess_E-μ)*τ_new)
+    
+    # r=exp(total_dis)
+
+    # if r<rand()
+    #     return false
+    # else
+    diagram.record_τ=τ_new
     return true
 
 end

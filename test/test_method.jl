@@ -1,22 +1,23 @@
-using .Tethys
+include("Diagram.jl")
+include("update.jl")
+using Plots
 using Random
 using LsqFit
 using JLD2
 
 begin
-    n_loop=200
+    n_loop=200000
     num_samples=20
-    n_hist=100000
-    α=5
-    μ=-5.6
+    n_hist=10000
+    α=20
+    μ=-47#9.2
     num_mea=1; regime=Diff_more();
-    p=0; max_τ=30; max_order=500; mass=1; ω=1;
+    p=0; max_τ=30; max_order=1000; mass=1; ω=1;
+    diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
 end
 
 begin
-    Random.seed!(13653)
-    diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-
+    n_loop=40000
     p_ins=0.2;p_rem=0.2;p_from_0=1;
     real_normalized=[p_ins,p_rem]
     real_normalized/=sum(real_normalized)
@@ -26,7 +27,15 @@ begin
     fake_cumsum=cumsum(fake_normalized)
     diagram.p_ins=real_normalized[1]
     diagram.p_rem=real_normalized[2]
+    #hist=Hist_Record(300,max_τ,max_order)
+    num_bins=300
+    unnormalized_data=zeros(num_bins)
+    bin_width=max_τ/num_bins
+    weight_box=zeros(max_order)
+end
 
+begin
+    #Random.seed!(13653)
 
     dia_order=diagram.order
     m=diagram.mass
@@ -59,8 +68,43 @@ begin
                     remove_arc!(diagram,dia_order,m,μ,ω,α_squared) 
                 end
             end
-            extend!(diagram)
+            swap_arc!(diagram)
             dia_order=diagram.order
+            scale!(diagram,-26.0)
+            τ=diagram.record_τ
+            unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+
+            # component=length(diagram.end_arc_box)
+            # weight_box[component+1]+=1
         end
     end
+end
+
+begin
+    time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
+    display(plot(time_points,log.(unnormalized_data),xlims = (7.5,10)))
+    linear(t, p) = p[1].-p[2].*t
+    min_time=Int(div(8.5,bin_width,RoundUp))
+    max_time=Int(div(9,bin_width,RoundUp))
+    p0=[0,(-α-1.26*(α/10)^2-μ)]
+    y=log.(unnormalized_data)[min_time:max_time]
+    time_points=time_points[min_time:max_time]
+    fit = curve_fit(linear, time_points, y, p0)
+end
+
+begin
+    min_time=Int(div(5.6,bin_width,RoundUp))
+    max_time=Int(div(8,bin_width,RoundUp))
+    time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
+    time_points=time_points[min_time:max_time]
+    y=unnormalized_data[min_time:max_time]
+    display(plot(time_points,log.(y),xlims = (5,10)))
+    linear(t, p) = p[1].-p[2].*t
+    p0=[0,(-α-1.26*(α/10)^2-μ)]
+    y=log.(y)
+    fit = curve_fit(linear, time_points, y, p0)
+end
+
+begin
+    plot(weight_box/sum(weight_box),xlims = (30,120),title="α="*string(α))
 end
