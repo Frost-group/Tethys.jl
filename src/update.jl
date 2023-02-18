@@ -58,12 +58,12 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     line_box=diagram.line_box
     index_in=rand(1:length(line_box))
     line=line_box[index_in]
-    τ_L=deepcopy(line.period[1])
-    τ_R=deepcopy(line.period[2])
+    τ_L=deepcopy(line.period[1])*τ
+    τ_R=deepcopy(line.period[2])*τ
     k_in=deepcopy(line.k)
 
     τ_1=rand(Uniform(τ_L,τ_R))
-    τ_2=τ_1-log(rand())/ω 
+    τ_2=τ_1-log(rand())/ω
 
     arc_T=τ_2-τ_1
 
@@ -71,7 +71,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         return false
     end
 
-    line.period[1]=τ_1
+    line.period[1]=τ_1/τ
     arc_T=τ_2-τ_1
     q=MVector{3}(rand(Normal(0,sqrt(m/arc_T)),3))
     
@@ -86,20 +86,20 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         #not set covered yet
         for i in index_in:2order+1
             line_tem=line_box[i]
-            if line_tem.period[2]<τ_2
-                total_dis+=dispersion(line_tem, m, μ)
+            if line_tem.period[2]<τ_2/τ
+                total_dis+=dispersion(line_tem, m, μ)*τ
                 line_tem.k-=q
                 line_tem.index+=1
-                total_dis-=dispersion(line_tem, m, μ)
+                total_dis-=dispersion(line_tem, m, μ)*τ
                 continue
             else
                 k_out=deepcopy(line_tem.k)
-                τ_R_2=deepcopy(line_tem.period[2])
-                line_tem.period[2]=τ_2
-                total_dis+=dispersion(line_tem, m, μ)
+                τ_R_2=deepcopy(line_tem.period[2]*τ)
+                line_tem.period[2]=τ_2/τ
+                total_dis+=dispersion(line_tem, m, μ)*τ
                 line_tem.k-=q
                 line_tem.index+=1
-                total_dis-=dispersion(line_tem, m, μ)
+                total_dis-=dispersion(line_tem, m, μ)*τ
                 index_out=i+2
                 break
             end
@@ -109,39 +109,39 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         τ_2=τ_2-τ
         for i in index_in:2order+1
             line_tem=line_box[i]
-            total_dis+=dispersion(line_tem, m, μ)
+            total_dis+=dispersion(line_tem, m, μ)*τ
             line_tem.k-=q
             line_tem.index+=1
-            total_dis-=dispersion(line_tem, m, μ)
+            total_dis-=dispersion(line_tem, m, μ)*τ
         end
 
         for i in 1:index_in
             line_tem=line_box[i]
 
-            if line_tem.period[2]<τ_2
-                total_dis+=dispersion(line_tem, m, μ)
+            if line_tem.period[2]<τ_2/τ
+                total_dis+=dispersion(line_tem, m, μ)*τ
                 line_tem.k-=q
-                total_dis-=dispersion(line_tem, m, μ)
+                total_dis-=dispersion(line_tem, m, μ)*τ
                 continue
             elseif i != index_in
                 k_out=deepcopy(line_tem.k)
-                τ_R_2=deepcopy(line_tem.period[2])
-                line_tem.period[2]=τ_2
-                total_dis+=dispersion(line_tem, m, μ)
+                τ_R_2=deepcopy(line_tem.period[2]*τ)
+                line_tem.period[2]=τ_2/τ
+                total_dis+=dispersion(line_tem, m, μ)*τ
                 line_tem.k-=q
-                total_dis-=dispersion(line_tem, m, μ)
+                total_dis-=dispersion(line_tem, m, μ)*τ
                 index_out=i+1
                 break
             else
                 k_out=deepcopy(line_tem.k)
-                line_tem.period[1]=τ_L
-                line_tem.period[2]=τ_2
-                total_dis-=dispersion(line_tem, m, μ)
+                line_tem.period[1]=τ_L/τ
+                line_tem.period[2]=τ_2/τ
+                total_dis-=dispersion(line_tem, m, μ)*τ
                 line_tem.k+=q
-                total_dis+=dispersion(line_tem, m, μ)
+                total_dis+=dispersion(line_tem, m, μ)*τ
                 index_out=i+1
-                line_tem.period[1]=τ_2
-                line_tem.period[2]=τ_1
+                line_tem.period[1]=τ_2/τ
+                line_tem.period[2]=τ_1/τ
             end
         end
 
@@ -149,7 +149,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     end
 
 
-    new_arc=Arc(q,[τ_1,τ_2],ω,index_in,index_out)
+    new_arc=Arc(q,[τ_1,τ_2]/τ,ω,index_in,index_out)
 
     p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
@@ -157,8 +157,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
     if r<rand()
         if !cross_over
-            line_box[index_in].period[1]=τ_L
-            line_box[index_out-2].period[2]=τ_R_2
+            line_box[index_in].period[1]=τ_L/τ
+            line_box[index_out-2].period[2]=τ_R_2/τ
             for i in index_in:index_out-2
                 line_tem=line_box[i]
                 line_tem.index=i
@@ -166,8 +166,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
         else
             if index_in!=index_out
-                line_box[index_in-1].period[1]=τ_L
-                line_box[index_out-1].period[2]=τ_R_2
+                line_box[index_in-1].period[1]=τ_L/τ
+                line_box[index_out-1].period[2]=τ_R_2/τ
                 for i in index_in-1:2order+1
                     
                     line_tem=line_box[i]
@@ -181,8 +181,8 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
                     line_tem.k+=q
                 end
             else
-                line_box[index_in-1].period[1]=τ_L
-                line_box[index_in-1].period[2]=τ_R
+                line_box[index_in-1].period[1]=τ_L/τ
+                line_box[index_in-1].period[2]=τ_R/τ
                 for i in 1:2order+1
                     
                     line_tem=line_box[i]
@@ -213,20 +213,20 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         end
 
         if !cross_over
-            line_tem=Line(k_in,[τ_L,τ_1], index_in, false)
+            line_tem=Line(k_in,[τ_L,τ_1]/τ, index_in, false)
             insert!(line_box, index_in, line_tem)
-            line_tem=Line(k_out,[τ_2,τ_R_2], index_out, false)
+            line_tem=Line(k_out,[τ_2,τ_R_2]/τ, index_out, false)
             insert!(line_box, index_out, line_tem)
         else
             if index_out!=index_in
-                line_tem=Line(k_out,[τ_2,τ_R_2], index_out, false)
+                line_tem=Line(k_out,[τ_2,τ_R_2]/τ, index_out, false)
                 insert!(line_box, index_out, line_tem)
-                line_tem=Line(k_in,[τ_L,τ_1], index_in, false)
+                line_tem=Line(k_in,[τ_L,τ_1]/τ, index_in, false)
                 insert!(line_box, index_in, line_tem)
             else
-                line_tem=Line(k_out,[τ_L,τ_2], index_in-1, false)
+                line_tem=Line(k_out,[τ_L,τ_2]/τ, index_in-1, false)
                 insert!(line_box, index_out-1, line_tem)
-                line_tem=Line(k_in,[τ_1,τ_R], index_in+1, false)
+                line_tem=Line(k_in,[τ_1,τ_R]/τ, index_in+1, false)
                 insert!(line_box, index_in+1, line_tem)
             end
         end
@@ -392,7 +392,8 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     end_arc_box = diagram.end_arc_box
     arc_box_length = length(arc_box)
     index=rand(1:order)
-    τ=0
+    offset_τ=0
+    τ=diagram.τ
     if index <= arc_box_length
         arc=arc_box[index]
         closed_arc = true
@@ -400,7 +401,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     else
         arc=end_arc_box[index-arc_box_length]
         closed_arc = false
-        τ=diagram.τ
+        offset_τ=diagram.τ
     end
 
     index_in=arc.index_in
@@ -413,22 +414,22 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     line_out=line_box[index_out]
 
 
-    τ_L=line_in.period[1]
+    τ_L=line_in.period[1]*τ
 
     if index_out-index_in==2
-        τ_R=line_out.period[2]
+        τ_R=line_out.period[2]*τ
     elseif index_out==index_in
-        τ_L=line_box[index_in-1].period[1]
-        τ_R=line_box[index_in+1].period[2]
+        τ_L=line_box[index_in-1].period[1]*τ
+        τ_R=line_box[index_in+1].period[2]*τ
     else
-        τ_R=line_box[index_in+1].period[2]
+        τ_R=line_box[index_in+1].period[2]*τ
     end
 
-    τ_R_2=line_out.period[2]
+    τ_R_2=line_out.period[2]*τ
     
-    τ_1=arc.period[1]
-    τ_2=arc.period[2]
-    arc_T=abs(τ-abs(τ_2-τ_1))
+    τ_1=arc.period[1]*τ
+    τ_2=arc.period[2]*τ
+    arc_T=abs(offset_τ-abs(τ_2-τ_1))
     total_dis=0
     w_x=1
     w_y=exp(-ω*arc_T)*α_squared/(2*pi)^3/norm(q)^2
@@ -438,17 +439,17 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     if closed_arc
         for i in index_in+1:index_out-1
             line_tem=line_box[i]
-            total_dis+=dispersion(line_tem, m, μ)
+            total_dis+=dispersion(line_tem, m, μ)*τ
             line_tem.index-=1
             line_tem.k+=q
-            total_dis-=dispersion(line_tem, m, μ)
+            total_dis-=dispersion(line_tem, m, μ)*τ
         end
     else
         for i in open_arc_range
             line_tem=line_box[i]
-            total_dis+=dispersion(line_tem, m, μ)
+            total_dis+=dispersion(line_tem, m, μ)*τ
             line_tem.k+=q
-            total_dis-=dispersion(line_tem, m, μ)
+            total_dis-=dispersion(line_tem, m, μ)*τ
         end
         for i in index_out:index_in
             line_tem=line_box[i]
@@ -461,7 +462,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             
     end
 
-    τ=diagram.τ
     p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
 
@@ -507,8 +507,8 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         if closed_arc
             if index_out-index_in==2
                 line_tem=line_box[index_in+1]
-                line_tem.period[1]=τ_L
-                line_tem.period[2]=τ_R
+                line_tem.period[1]=τ_L/τ
+                line_tem.period[2]=τ_R/τ
                 line_tem.covered=false
                 sign_to_add=[sign_box[index_in][1],sign_box[index_out][2]]
                 deleteat!(sign_box, index_in:index_out)
@@ -516,14 +516,14 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
             else
                 line_tem=line_box[index_in+1]
-                line_tem.period[1]=τ_L
+                line_tem.period[1]=τ_L/τ
                 sign_to_add=[sign_box[index_in][1],sign_box[index_in+1][2]]
                 deleteat!(sign_box, index_in:index_in+1)
                 insert!(sign_box, index_in, sign_to_add)
 
 
                 line_tem=line_box[index_out-1]
-                line_tem.period[2]=τ_R_2
+                line_tem.period[2]=τ_R_2/τ
                 sign_to_add=[sign_box[index_out-2][1],sign_box[index_out-1][2]]
                 deleteat!(sign_box, index_out-2:index_out-1)
                 insert!(sign_box, index_out-2, sign_to_add)
@@ -534,8 +534,8 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         else
             if index_out == index_in
                 line_tem=line_box[index_in]
-                line_tem.period[1]=τ_L
-                line_tem.period[2]=τ_R
+                line_tem.period[1]=τ_L/τ
+                line_tem.period[2]=τ_R/τ
                 line_tem.covered=false
                 sign_to_add=[sign_box[index_out-1][1],sign_box[index_in+1][2]]
                 deleteat!(sign_box, index_out-1:index_in+1)
@@ -543,8 +543,8 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
             else
                 line_tem=line_box[index_in]
-                line_tem.period[1]=τ_L
-                line_tem.period[2]=τ_R
+                line_tem.period[1]=τ_L/τ
+                line_tem.period[2]=τ_R/τ
                 sign_to_add=[sign_box[index_in][1],sign_box[index_in+1][2]]
                 deleteat!(sign_box,index_in:index_in+1)
                 insert!(sign_box, index_in, sign_to_add)
@@ -807,7 +807,7 @@ function swap_arc!(diagram::Diagram)
     w_x=green_zero(chosen_line, m, μ)*phonon_propagator(arc_l)*phonon_propagator(arc_r)
     w_y=green_zero(new_line, m, μ)*phonon_propagator(new_arc_l)*phonon_propagator(new_arc_r)
 
-    r=w_y/w_x
+    r=(w_y/w_x)^diagram.τ
 
     if r<rand()
         return false
@@ -927,8 +927,6 @@ function scale!(diagram::Diagram, order::Int64,m::Int64,μ::Float64,ω::Int64, s
         return false
     end
 
-    scaling_factor = τ_new[1]/τ
-
     #setproperty!.(diagram.line_box, :period, map(p->p.period*scaling_factor, diagram.line_box))
     #setproperty!.(diagram.arc_box, :period, map(p->p.period*scaling_factor, diagram.arc_box))
     #setproperty!.(diagram.end_arc_box, :period, map(p->p.period*scaling_factor, diagram.end_arc_box))
@@ -937,17 +935,17 @@ function scale!(diagram::Diagram, order::Int64,m::Int64,μ::Float64,ω::Int64, s
     #foreach(arc -> arc.period*=scaling_factor, arc_box)
     #foreach(arc -> arc.period*=scaling_factor, end_arc_box)
 
-    for line in line_box
-        line.period*=scaling_factor
-    end
+    #for line in line_box
+    #    line.period*=scaling_factor
+    #end
 
-    for arc in arc_box
-        arc.period*=scaling_factor
-    end
+    #for arc in arc_box
+    #    arc.period*=scaling_factor
+    #end
 
-    for arc in end_arc_box
-        arc.period*=scaling_factor
-    end
+    #for arc in end_arc_box
+    #    arc.period*=scaling_factor
+    #end
 
     diagram.dispersion*=τ_new[1]/τ
     diagram.τ=τ_new[1]

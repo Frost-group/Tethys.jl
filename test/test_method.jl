@@ -10,8 +10,8 @@ begin
     n_loop=200000
     num_samples=20
     n_hist=100000
-    α=20
-    μ=-47#9.2
+    α=3
+    μ=-3.5#9.2
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=1000; mass=1; ω=1;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
@@ -87,7 +87,7 @@ end
 
 begin
     time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
-    display(plot(time_points,log.(unnormalized_data),xlims = (8,12)))
+    display(plot(time_points,log.(unnormalized_data),xlims = (0,30)))
     linear(t, p) = p[1].-p[2].*t
     min_time=Int(div(9,bin_width,RoundUp))
     max_time=Int(div(10,bin_width,RoundUp))
@@ -111,9 +111,9 @@ begin
 end
 
 begin
-    plot(weight_box/sum(weight_box),xlims = (50,120),title="α="*string(α))
+    plot(weight_box/sum(weight_box),xlims = (0,10),title="α="*string(α))
 end
 
 begin
-    set_μ!(diagram,-49.0)
+    set_μ!(diagram,-1.1)
 end

@@ -66,7 +66,7 @@ mutable struct Diagram
         τ = 5.0#5/ω+rand()*max_τ
         #τ = 10.5
         new(mass, μ, ω, α, [p,0,0], τ, [], max_τ, 0, 0, max_order, [], [],
-        [Line([p,0,0], [0, τ], 1,false)], [[0,0]],p_ins, p_rem,-τ*(norm(p)^2/(2*mass)-μ))
+        [Line([p,0,0], [0, τ/τ], 1,false)], [[0,0]],p_ins, p_rem,-τ*(norm(p)^2/(2*mass)-μ))
     end
 end
 
