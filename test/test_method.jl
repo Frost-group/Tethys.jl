@@ -8,17 +8,17 @@ using JLD2
 
 begin
     n_loop=200000
-    num_samples=15
-    n_hist=10000
-    α=15#20
-    μ=-28#-47#9.2
+    num_samples=20
+    n_hist=100000
+    α=20
+    μ=-47#9.2
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=1000; mass=1; ω=1;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
 end
 
 begin
-    n_loop=40000
+    n_loop=400000
     p_ins=0.2;p_rem=0.2;p_from_0=1;
     real_normalized=[p_ins,p_rem]
     real_normalized/=sum(real_normalized)
@@ -36,7 +36,7 @@ end
 
 begin
     #Random.seed!(13653)
-
+    num_samples=5
     dia_order=diagram.order
     m=diagram.mass
     μ=diagram.μ
@@ -70,19 +70,24 @@ begin
             end
             swap_arc!(diagram)
             dia_order=diagram.order
-            scale!(diagram)
-            τ=diagram.record_τ
-            unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+            scale!(diagram,dia_order,m,μ,ω,num_samples)
 
-            # component=diagram.component
-            # weight_box[component+1]+=1
+            for i in 1:num_samples
+                τ=diagram.record_τ[i]
+                if τ<max_τ
+                    unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+                end
+            end
+
+            component=diagram.component
+            weight_box[component+1]+=1
         end
     end
 end
 
 begin
     time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
-    display(plot(time_points,log.(unnormalized_data),xlims = (7.5,10)))
+    display(plot(time_points,log.(unnormalized_data),xlims = (8,12)))
     linear(t, p) = p[1].-p[2].*t
     min_time=Int(div(9,bin_width,RoundUp))
     max_time=Int(div(10,bin_width,RoundUp))
@@ -106,5 +111,9 @@ begin
 end
 
 begin
-    plot(weight_box/sum(weight_box),xlims = (30,70),title="α="*string(α))
+    plot(weight_box/sum(weight_box),xlims = (50,120),title="α="*string(α))
+end
+
+begin
+    set_μ!(diagram,-49.0)
 end

@@ -14,9 +14,11 @@ function insert_arc_benchmark(α, μ=-1.5, inserts=1, p=0)
     m=mass
     α_squared=2pi*α*sqrt(2)
     for i in 1:inserts
-        insert_arc2!(diagram,order,mass, μ, ω, α_squared)
+        insert_arc!(diagram,order,mass, μ, ω, α_squared)
         order = diagram.order
         #swap_arc!(diagram)
+        scale!(diagram,order,m,μ,ω,1)
+        
         #extend!(diagram)
         
     end
