@@ -87,10 +87,10 @@ end
 
 begin
     time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
-    display(plot(time_points,log.(unnormalized_data),xlims = (8,12)))
+    display(plot(time_points,log.(unnormalized_data),xlims = (9,12)))
     linear(t, p) = p[1].-p[2].*t
-    min_time=Int(div(9,bin_width,RoundUp))
-    max_time=Int(div(10,bin_width,RoundUp))
+    min_time=Int(div(10,bin_width,RoundUp))
+    max_time=Int(div(11,bin_width,RoundUp))
     p0=[0,(-α-1.26*(α/10)^2-μ)]
     y=log.(unnormalized_data)[min_time:max_time]
     time_points=time_points[min_time:max_time]
