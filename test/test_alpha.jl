@@ -1,4 +1,7 @@
-using .Tethys
+#using .Tethys
+include("../src/Diagram.jl")
+include("../src/update.jl")
+include("../src/measure.jl")
 using Random
 using LsqFit
 using Plots
@@ -13,9 +16,9 @@ begin
 end
 
 begin
-    n_loop=40000
-    num_samples=30
-    α_list=collect(26:26)*0.25.+0.1#num_samples-1 21 22
+    n_loop=500
+    num_samples=1
+    α_list=collect(0.9).+0.1#num_samples-1 21 22
     μ_list=-α_list.-1.26*(α_list./10).^2 .-0.8
     # α=1.5
     # μ_list=-(1.7 .+collect(0:num_samples-1).*0.1)
@@ -25,22 +28,17 @@ begin
 
     linear(t, p) = p[1].-p[2].*t
     bin_width=max_τ/300
-    min_time=Int(div(5,bin_width,RoundUp))
-    max_time=Int(div(12,bin_width,RoundUp))
+    min_time=Int(div(7,bin_width,RoundUp))
+    max_time=Int(div(10,bin_width,RoundUp))
 
     for i in 1:num_samples
         α=α_list[i]
         μ=μ_list[i]
-        # if i==22
-        #     μ-=0.1
-        # end
-        # if i>22
-        #     μ-=0.2
-        # end
         hist=Hist_Record(300,max_τ,max_order)
         diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",true,n_loop)#
+        diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"E://data",n_loop,false)#
         println("end:",i)
+        println(diagram.τ)
 
         time_points=hist.time_points[min_time:max_time]
 

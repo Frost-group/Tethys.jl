@@ -51,8 +51,8 @@ mutable struct Diagram
     order :: Int64
     max_order :: Int64
     
-    arc_box :: Array{Arc}
-    line_box:: Array{Line}
+    arc_box :: Array{Arc,1}
+    line_box:: Array{Line,1}
     sign_box:: Array{Array{Int64, 1}, 1}
 
     p_ins :: Float64
