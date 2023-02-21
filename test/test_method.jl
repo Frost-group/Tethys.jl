@@ -14,7 +14,7 @@ begin
     α=20
     μ=-47#3.5#9.2
     num_mea=1; regime=Diff_more();
-    p=0; max_τ=15; max_order=1000; mass=1; ω=1;
+    p=0; max_τ=30; max_order=1000; mass=1; ω=1;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
 end
 
@@ -29,7 +29,7 @@ begin
     fake_cumsum=cumsum(fake_normalized)
     diagram.p_ins=real_normalized[1]
     diagram.p_rem=real_normalized[2]
-    num_bins=500
+    num_bins=300
     unnormalized_data=zeros(num_bins)
     bin_width=max_τ/num_bins
     weight_box = zeros(max_order)
@@ -37,7 +37,7 @@ end
 
 begin
     #Random.seed!(13653)
-    num_samples=5
+    num_samples=1
     dia_order=diagram.order
     m=diagram.mass
     μ=diagram.μ
@@ -71,6 +71,13 @@ begin
             end
             swap_arc!(diagram)
             dia_order=diagram.order
+            # dis=-diagram.dispersion
+            # if abs(2*dia_order-dis)<sqrt(dis)
+            #     scale!(diagram,dia_order,m,μ,ω,num_samples)
+            #     τ=diagram.record_τ[1]
+            #     unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+            # end
+
             # scale!(diagram,dia_order,m,μ,ω,num_samples)
 
             # for i in 1:num_samples
@@ -86,11 +93,15 @@ begin
 end
 
 begin
+    plot(weight_box/sum(weight_box),xlims = (0,100),title="α="*string(α))
+end
+
+begin
     unnormalized_data=zeros(num_bins)
     bin_width=max_τ/num_bins
     weight_box = zeros(max_order)
-    n_loop=200000000
-    n_hist=200
+    # n_loop=200000000
+    # n_hist=200
 end
 
 begin
@@ -129,6 +140,15 @@ begin
             end
             swap_arc!(diagram)
             dia_order=diagram.order
+
+            if mod(i,10) == 0
+                dis=-diagram.dispersion
+                if abs(2*dia_order-dis)<2*sqrt(dis)
+                    scale!(diagram,dia_order,m,μ,ω,num_samples)
+                    τ=diagram.record_τ[1]
+                    unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+                end
+            end
             
             # for i in 1:num_samples
             #     τ=diagram.record_τ[i]
@@ -140,18 +160,18 @@ begin
             # component=diagram.component
             weight_box[dia_order+1]+=1
         end
-        scale!(diagram,dia_order,m,μ,ω,num_samples)
-        τ=diagram.record_τ[1]
-        unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
+        # scale!(diagram,dia_order,m,μ,ω,num_samples)
+        # τ=diagram.record_τ[1]
+        # unnormalized_data[Int(div(τ,bin_width,RoundUp))]+=1
     end
 end
 
 begin
     time_points=collect(1:num_bins)*bin_width.-(bin_width/2)
-    display(plot(time_points,log.(unnormalized_data),xlims = (0,12)))
+    display(plot(time_points,log.(unnormalized_data),xlims = (0,10)))
     linear(t, p) = p[1].-p[2].*t
-    min_time=Int(div(8,bin_width,RoundUp))
-    max_time=Int(div(9,bin_width,RoundUp))
+    min_time=Int(div(6,bin_width,RoundUp))
+    max_time=Int(div(8,bin_width,RoundUp))
     p0=[0,(-α-1.26*(α/10)^2-μ)]
     y=log.(unnormalized_data)[min_time:max_time]
     time_points=time_points[min_time:max_time]
@@ -182,7 +202,7 @@ begin
 end
 
 begin
-    plot(weight_box/sum(weight_box),xlims = (0,100),title="α="*string(α))
+    plot(weight_box/sum(weight_box),xlims = (0,1000),title="α="*string(α))
 end
 
 begin

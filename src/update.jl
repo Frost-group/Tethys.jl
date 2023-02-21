@@ -155,6 +155,10 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
     p_y_x=diagram.p_rem/(order+1)
     r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
+    # coef_old=-diagram.dispersion/τ
+    # coef_new=-(diagram.dispersion-total_dis-arc_T*ω)/τ
+    # r*=1/(2order+2)/(2order+1)*(coef_new/coef_old)^(2order+1)*coef_new^2
+
     if r<rand()
         if !cross_over
             line_box[index_in].period[1]=τ_L/τ
@@ -467,7 +471,9 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
     p_y_x=diagram.p_rem/order
     r=((2*pi)^3*p_x_y*norm(q)^2)/(exp(total_dis)*p_y_x*α_squared)
-
+    # coef_old=-diagram.dispersion/τ
+    # coef_new=-(diagram.dispersion-total_dis+arc_T*ω)/τ
+    # r*=(2order)*(2order-1)*(coef_new/coef_old)^(2order-1)/coef_old^2
 
     if r<rand()
         if closed_arc
@@ -808,6 +814,7 @@ function swap_arc!(diagram::Diagram)
     w_y=green_zero(new_line, m, μ)*phonon_propagator(new_arc_l)*phonon_propagator(new_arc_r)
 
     r=(w_y/w_x)^diagram.τ
+    # r=ratio*(1+log(ratio)/diagram.dispersion)^(2order+1)
 
     if r<rand()
         return false
