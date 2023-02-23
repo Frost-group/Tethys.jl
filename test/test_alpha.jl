@@ -16,10 +16,10 @@ begin
 end
 
 begin
-    n_loop=500
+    n_loop=100000
     num_samples=1
-    α_list=collect(0.9).+0.1#num_samples-1 21 22
-    μ_list=-α_list.-1.26*(α_list./10).^2 .-0.8
+    α_list=[6.0]#num_samples-1 21 22
+    μ_list=-α_list.-1.26*(α_list./10).^2 .-0.4
     # α=1.5
     # μ_list=-(1.7 .+collect(0:num_samples-1).*0.1)
     num_mea=1; regime=Diff_more();
@@ -28,8 +28,8 @@ begin
 
     linear(t, p) = p[1].-p[2].*t
     bin_width=max_τ/300
-    min_time=Int(div(7,bin_width,RoundUp))
-    max_time=Int(div(10,bin_width,RoundUp))
+    min_time=Int(div(5,bin_width,RoundUp))
+    max_time=Int(div(12,bin_width,RoundUp))
 
     for i in 1:num_samples
         α=α_list[i]
@@ -52,6 +52,7 @@ begin
 
         append!(scanned_α,α)
         append!(energy_record,fit.param[2]+μ)
+        println(fit.param[2])
         append!(E_error_record,errors[2])
 
         z0=exp(fit.param[1])
@@ -64,6 +65,14 @@ begin
         println("energy:",fit.param[2]+μ)
         println("perturb:",-α-1.26*(α/10)^2)
     end
+end
+
+function first_dif(data,bin_width)
+    diff=[]
+    for i in 2:length(data)-1
+        append!(diff,(data[i+1]-data[i-1])/(2*bin_width))
+    end
+    return diff
 end
 
 begin 

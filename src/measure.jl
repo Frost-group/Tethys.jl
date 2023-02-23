@@ -241,7 +241,7 @@ function hist_measure!(diagram::Diagram,hist::Hist_Record,folder, n_loop=5000, s
                     remove_arc!(diagram,order,m,μ,ω,α_squared) 
                 end
 
-                swap_arc!(diagram)
+                #swap_arc!(diagram)
             end
             extend!(diagram, dispersion_val)
             order=diagram.order
