@@ -30,7 +30,13 @@ function zero_insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω:
 
     line.period[1]=τ_1/τ
     arc_T=τ_2-τ_1
-    q=MVector{3}(rand(Normal(0,sqrt(m/arc_T)),3))
+    phi = rand(Uniform(0,pi*2))
+    costheta = rand(Uniform(-1,1))
+    theta = acos(costheta)
+    x = sin(theta)*cos(phi)
+    y = sin(theta)*sin(phi)
+    z = cos(theta)
+    q = abs(rand(Normal(0,sqrt(m/arc_T)))).*[x,y,z]
     
     w_x=1.0
     w_y=1.0
@@ -64,10 +70,10 @@ function zero_insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω:
 
     new_arc=Arc(q,[τ_1,τ_2]/τ,ω,index_in,index_out)
 
-    p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)
-    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
-    p_y_x=diagram.p_rem/(order+1-component)
-    r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
+    p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)*ω/(1-exp(-ω*(τ-τ_1)))
+    p_x_y*=1/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5#*1.0/norm(q)^2
+    p_y_x=diagram.p_rem/(order+1)
+    r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3)#*norm(q)^2
     # coef_old=-diagram.dispersion/τ
     # coef_new=-(diagram.dispersion-total_dis-arc_T*ω)/τ
     # r*=1/(2order+2)/(2order+1)*(coef_new/coef_old)^(2order+1)*coef_new^2
@@ -176,12 +182,13 @@ end
 
 function zero_remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int64,α_squared::Float64)
 
-    if order-1<0
+    component=diagram.component
+    if order-component-1<0
         return false
     end
-    
+
     arc_box=diagram.arc_box
-    component=diagram.component
+    
     arc_box_length = length(arc_box)
     index=rand(1:order-component)
     τ=diagram.τ
@@ -221,11 +228,11 @@ function zero_remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω:
         total_dis-=dispersion(line_tem, m, μ)*τ
     end
 
-    p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)
-    p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
+    p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)*ω/(1-exp(-ω*(τ-τ_1)))
+    p_x_y*=1.0/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5#exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
 
-    p_y_x=diagram.p_rem/(order-component)
-    r=((2*pi)^3*p_x_y*norm(q)^2)/(exp(total_dis)*p_y_x*α_squared)
+    p_y_x=diagram.p_rem/order
+    r=((2*pi)^3*p_x_y)/(exp(total_dis)*p_y_x*α_squared)#*norm(q)^2
     # coef_old=-diagram.dispersion/τ
     # coef_new=-(diagram.dispersion-total_dis+arc_T*ω)/τ
     # r*=(2order)*(2order-1)*(coef_new/coef_old)^(2order-1)/coef_old^2
