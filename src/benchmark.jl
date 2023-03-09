@@ -1,6 +1,7 @@
 include("Diagram.jl")
 include("update.jl")
 include("measure.jl")
+include("zero_update.jl")
 import Tethys
 using Random
 using Logging
@@ -15,9 +16,9 @@ function insert_arc_benchmark(α, μ=-1.5, inserts=1, p=0)
     α_squared=2pi*α*sqrt(2)
     for i in 1:inserts
         insert_arc!(diagram,order,mass, μ, ω, α_squared)
-        order = diagram.order
+        order=diagram.order
         #swap_arc!(diagram)
-        scale!(diagram,order,m,μ,ω,1)
+        #scale!(diagram,order,m,μ,ω,1)
         
         #extend!(diagram)
         
@@ -26,7 +27,7 @@ function insert_arc_benchmark(α, μ=-1.5, inserts=1, p=0)
 end
 
 begin
-    t = @benchmark insert_arc_benchmark(5.0,-6.0,2000)
+    t = @benchmark insert_arc_benchmark(1.0,-1.2,1)
 end
 
 begin
