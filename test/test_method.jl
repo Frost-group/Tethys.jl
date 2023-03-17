@@ -20,6 +20,7 @@ begin
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=2000; mass=1; ω=1;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
+    set_τ!(diagram,20.0)
 end
 
 begin
@@ -38,18 +39,14 @@ begin
     bin_width=max_τ/num_bins
     weight_box = zeros(max_order)
     order_box= zeros(max_order)
-    sample_freq = 200
-    energy_record=zeros(Int64(n_loop*n_hist/sample_freq))
-    energy_mean=zeros(Int64(n_loop*n_hist/sample_freq))
-    p_record=zeros(Int64(n_loop*n_hist/sample_freq))
-    mass_mean=zeros(Int64(n_loop*n_hist/sample_freq))
-    arc_q_total_list = zeros(Int64(n_loop*n_hist/sample_freq))
-    arc_q_mean_list = zeros(Int64(n_loop*n_hist/sample_freq))
-    
+    energy_record=[]
+    # n_loop=1
+    # n_hist=5000
 end
 
+
 begin
-    # Random.seed!(132432333)
+    Random.seed!(132432333)
     num_samples=1
     dia_order=diagram.order
     m=diagram.mass
@@ -57,13 +54,15 @@ begin
     ω=diagram.ω
     α=diagram.α
     α_squared=2pi*α*sqrt(2)
-
+    result=true
     println("begin")
     for j in 1:n_loop
         println("loop.number:",j)
         for i in 1:n_hist
             q=rand()
-            #add = false
+            # if !result
+            #     swap_arc!(diagram)
+            # end
             if dia_order == 0
                 diagram.p_ins=fake_normalized[1]
                 result=insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
@@ -85,18 +84,54 @@ begin
                     #add = true
                 end
             end
-
-            #if !result[1] && ((j-1)*n_hist+i) > 60000000 && ((j-1)*n_hist+i) < 120000000
-            #    swap_arc!(diagram)
-            #end
-
-            #swap_arc!(diagram)
+            # println()
+            # check_k(diagram)
+            # println()
             dia_order=diagram.order
-            #update_arcp!(diagram,dia_order,m,μ)
-            # println("dis_t1")
-            # println(diagram.dispersion)
-            # println("dis_t2")
-            # println(total_dis_check(diagram))
+            resample_arc!(diagram,dia_order,m,μ,ω,α_squared)
+            E_value=energy(diagram)
+            append!(energy_record,E_value)
+            # swap_arc!(diagram)
+            # println(diagram.arc_box)
+            # check_timeorder(diagram)
+            # println()
+            # println("new")
+            # println(diagram.component)
+            # println(diagram.line_box)
+            # println(diagram.arc_box)
+            # println(diagram.end_arc_box)
+            # println()
+            # if resample_arc!(diagram,dia_order,m,μ,ω,α_squared)
+            # # println(diagram.line_box)
+            # # println(diagram.arc_box)
+            #     println("yes")
+            #     println("dis_t1")
+            #     println(diagram.dispersion)
+            #     println("dis_t2")
+            #     println(total_dis_check(diagram))
+            # else
+            #     println("no")
+            #     println("dis_t1")
+            #     println(diagram.dispersion)
+            #     println("dis_t2")
+            #     println(total_dis_check(diagram))
+            # end
+            # println(diagram.line_box)
+            # println(diagram.arc_box)
+            # println(diagram.end_arc_box)
+            # println()
+            # check_timeorder(diagram)
+            
+            # if !result
+            #     swap_arc!(diagram)
+            # end
+            
+            # swap_arc!(diagram)
+            
+            # update_arcp!(diagram,dia_order,m,μ)
+            # update_arcp!(diagram,dia_order,m,μ)
+            # update_arcp!(diagram,dia_order,m,μ)
+
 
             # dis=-diagram.dispersion
             # println(dis)
@@ -117,40 +152,23 @@ begin
             component=diagram.component
             weight_box[component+1]+=1
             order_box[dia_order+1]+=1
-            if mod(i,sample_freq) == 0
-                E_value=energy(diagram)
-                p_value=mass_estimator(diagram)
-                energy_record[Int64(((j-1)*n_hist+i)/sample_freq)] = E_value
-                energy_mean[Int64(((j-1)*n_hist+i)/sample_freq)] = mean(energy_record[1:Int64(((j-1)*n_hist+i)/sample_freq)])
-                p_record[Int64(((j-1)*n_hist+i)/sample_freq)] = p_value
-                mass_mean[Int64(((j-1)*n_hist+i)/sample_freq)] = 1/(1-mean(p_record[1:Int64(((j-1)*n_hist+i)/sample_freq)])*diagram.τ/3)
-                #arc_q_total = 0.0
-                #for l in 1:length(diagram.arc_box)
-                    #arc_q_total += norm(diagram.arc_box[l].q)
-                    #arc_q_total = diagram.arc_box[1].period[2] - diagram.arc_box[1].period[1]
-                #end
-                #if add
-                #    arc_q_total_list[Int64(((j-1)*n_hist+i)/sample_freq)] = result[2]
-                #    arc_q_mean_list[Int64(((j-1)*n_hist+i)/sample_freq)] = mean(arc_q_total_list[1:Int64(((j-1)*n_hist+i)/sample_freq)])
-                #end
-            end
-            #energy_mean[(j-1)+i] = mean(energy_record[1:(j-1)+i])
-
-            #if mod(i,200) == 0
-            #    E_value=energy(diagram)
-            #    append!(energy_record,E_value)
-            #    append!(energy_mean,mean(energy_record))
-            #end
+            
+            # E_value=energy(diagram)
+            # append!(energy_record,E_value)
+            # if mod(i,200) == 0
+            #     E_value=energy(diagram)
+            #     append!(energy_record,E_value)
+            # end
         end
     end
 end
 
 begin
-    plot(weight_box/sum(weight_box),xlims = (0,100),title="α="*string(α))
+    plot(weight_box/sum(weight_box),xlims = (0,10),title="α="*string(α))
 end
 
 begin
-    plot(order_box/sum(order_box),xlims = (0,1000),title="α="*string(α))
+    plot(order_box/sum(order_box),xlims = (0,100),title="α="*string(α))
     # plot!(range(0,100),pdf(Poisson(-diagram.dispersion/1.99),range(0,00)))
 end
 
@@ -159,6 +177,20 @@ begin
     histogram(energy_record[2000:end])#,xlims = (-5.0,-2.5))
     # println(mean(energy_record))
     # println(std(energy_record))
+end
+
+begin
+    time=check_timeorder(diagram)
+end
+
+begin
+    for i in 2:length(time)
+        if time[i][1]==time[i-1][2]
+            println(true)
+        else
+            println(false)
+        end
+    end
 end
 
 begin

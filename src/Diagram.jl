@@ -172,4 +172,16 @@ function check_timeorder(diagram::Diagram)
     end
 
     println("index_box",index_box)
+    return index_box
+end
+
+function check_k(diagram::Diagram)
+    index_box=[]
+    for index in 1:length(diagram.line_box)
+        line=diagram.line_box[index]
+        push!(index_box,[line.k[1],line.k[2],line.k[3]])
+    end
+
+    println("index_box",index_box)
+    return index_box
 end
