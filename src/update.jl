@@ -802,7 +802,19 @@ function energy(diagram::Diagram)
     total_dis=-diagram.dispersion
     τ=diagram.τ
     order=diagram.order
+    #return (total_dis-2*order+2*length(diagram.end_arc_box))/τ
     return (total_dis-2*order)/τ
+end
+
+function mass_estimator(diagram::Diagram)
+    line_box=diagram.line_box
+    p_squared = [0.0, 0.0, 0.0]
+    τ=diagram.τ
+    for line in line_box
+        p_squared .+= p_dispersion(line, m, μ) .*2
+    end
+    #return 1 / (1 - (norm(p_squared)^2)*τ/(3))
+    return (norm(p_squared)^2)
 end
 
 function total_dis_check(diagram::Diagram)
