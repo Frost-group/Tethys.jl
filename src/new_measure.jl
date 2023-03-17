@@ -108,6 +108,7 @@ function simulate!(diagram::Diagram,estimators::Estimators_Record, swap_arc=fals
     ω=diagram.ω
     α=diagram.α
     α_squared=2pi*α*sqrt(2)
+    τ=diagram.τ
 
     println("begin")
     for j in 1:n_loop
@@ -139,18 +140,38 @@ function simulate!(diagram::Diagram,estimators::Estimators_Record, swap_arc=fals
             end
 
             dia_order=diagram.order
+            #scale!(diagram,dia_order,m,μ,ω,1)
             #update_arcp!(diagram,dia_order,m,μ)
 
             component=diagram.component
             weight_box[component+1]+=1
             order_box[dia_order+1]+=1
+
+            #while argmax(weight_box) <= 40
+            #    println(argmax(weight_box))
+            #    insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
+            #    zero_remove_arc!(diagram,dia_order,m,μ,ω,α_squared)
+            #    dia_order=diagram.order
+            #    component=diagram.component
+            #    weight_box[component+1]+=1
+            #    order_box[dia_order+1]+=1
+            #end
+
             if mod(i,sample_freq) == 0
+                estimator_index = Int64(((j-1)*n_hist+i)/sample_freq)
                 E_value=energy(diagram)
                 p_value=mass_estimator(diagram)
-                energy_record[Int64(((j-1)*n_hist+i)/sample_freq)] = E_value
-                energy_mean[Int64(((j-1)*n_hist+i)/sample_freq)] = mean(energy_record[1:Int64(((j-1)*n_hist+i)/sample_freq)])
-                p_record[Int64(((j-1)*n_hist+i)/sample_freq)] = p_value
-                mass_mean[Int64(((j-1)*n_hist+i)/sample_freq)] = 1/(1-mean(p_record[1:Int64(((j-1)*n_hist+i)/sample_freq)])*diagram.τ/3)
+                energy_record[estimator_index] = E_value
+                p_record[estimator_index] = p_value
+                if estimator_index == 1  
+                    energy_mean[estimator_index] = mean(energy_record[1:estimator_index])
+                    mass_mean[estimator_index] = 1/(1-mean(p_record[1:estimator_index])*τ/3)
+                else
+                    energy_mean[estimator_index] = (E_value + energy_mean[estimator_index-1]*(estimator_index-1))/estimator_index
+                    p_mean = (p_value + (3/τ)*(1-1/mass_mean[estimator_index-1])*(estimator_index-1))/estimator_index
+                    mass_mean[estimator_index] = 1/(1-p_mean*τ/3)
+                end
+                
             end
         end
     end

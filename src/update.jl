@@ -869,10 +869,10 @@ function swap_arc!(diagram::Diagram)
             line_box[new_arc_r.index_in+1].covered=true
         end
         sign=diagram.sign_box[line_index]
-        shift!(diagram,sign[1],line_index-1,right_index,!right_open,m,μ)
-        shift!(diagram,sign[2],line_index,left_index,!left_open,m,μ)
-        update_arcp!(diagram,order,right_index,!right_open,m,μ)
-        update_arcp!(diagram,order,left_index,!left_open,m,μ)
+        #shift!(diagram,sign[1],line_index-1,right_index,!right_open,m,μ)
+        #shift!(diagram,sign[2],line_index,left_index,!left_open,m,μ)
+        #update_arcp!(diagram,order,right_index,!right_open,m,μ)
+        #update_arcp!(diagram,order,left_index,!left_open,m,μ)
         return true
     end
 end
@@ -979,6 +979,8 @@ function mass_estimator(diagram::Diagram)
     line_box=diagram.line_box
     p_squared = [0.0, 0.0, 0.0]
     τ=diagram.τ
+    m=diagram.mass
+    μ=diagram.μ
     for line in line_box
         p_squared .+= p_dispersion(line, m, μ) .*2
     end
