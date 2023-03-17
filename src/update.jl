@@ -158,7 +158,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
     new_arc=Arc(q,[τ_1,τ_2]/τ,ω,index_in,index_out)
 
-    p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)*ω/(1-exp(-ω*(τ)))
+    p_x_y=diagram.p_ins*ω/(1-exp(-ω*(τ)))/(2order+1)/(τ_R-τ_L)
     p_x_y*=1/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5#*1.0/norm(q)^2
     p_y_x=diagram.p_rem/(order+1)
     r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3)#*norm(q)^2
@@ -237,7 +237,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             else
                 line_tem=Line(k_out,[τ_L,τ_2]/τ, index_in-1, false)
                 insert!(line_box, index_out-1, line_tem)
-                line_tem=Line(k_in,[τ_1,τ_R]/τ, index_in+1, false)
+                line_tem=Line(k_out,[τ_1,τ_R]/τ, index_in+1, false)
                 insert!(line_box, index_in+1, line_tem)
             end
         end
@@ -473,7 +473,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             
     end
 
-    p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)*ω/(1-exp(-ω*(τ)))
+    p_x_y=diagram.p_ins*ω/(1-exp(-ω*(τ)))/(2order-1)/(τ_R-τ_L)
     p_x_y*=1.0/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5#exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
 
     p_y_x=diagram.p_rem/order
@@ -712,171 +712,6 @@ function arc_judge(arc::Arc,sign::Int64,bound::Bool,index::Int64)
     end
 end
 
-function swap_arc!(diagram::Diagram)
-
-    order=diagram.order
-    m=diagram.mass
-    μ=diagram.μ
-    ω=diagram.ω
-
-    if order<2
-        return false
-    end
-
-    line_box=diagram.line_box
-    line_index=rand(2:2*order)
-    chosen_line=line_box[line_index]
-
-    if chosen_line.covered
-        return false
-    end
-
-    sign=diagram.sign_box[line_index]
-    arc_box=diagram.arc_box
-    end_arc_box=diagram.end_arc_box
-    arc_box_length = length(arc_box)
-    left_check=false
-    right_check=false
-    left_open=false
-    right_open=false
-    left_index=0
-    right_index=0
-
-    for i in 1:arc_box_length
-        arc=arc_box[i]
-        if !left_check
-            if arc_judge(arc,sign[1],false,line_index)
-                left_index=i
-                left_check=true
-            end
-        end
-
-        if !right_check
-            if arc_judge(arc,sign[2],true,line_index)
-                right_index=i
-                right_check=true
-            end
-        end
-
-        if right_check && left_check
-            break
-        end
-    end
-    for i in 1:length(end_arc_box)
-        arc=end_arc_box[i]
-        if !left_check
-            if arc_judge(arc,sign[1],false,line_index)
-                left_index=i
-                left_check=true
-                left_open=true
-            end
-        end
-
-        if !right_check
-            if arc_judge(arc,sign[2],true,line_index)
-                right_index=i
-                right_check=true
-                right_open=true
-            end
-        end
-
-        if right_check && left_check
-            break
-        end
-    end
-
-    if right_open && left_open && right_index == left_index
-        return false
-    end
-    # println(right_check,left_check)
-    # println("swap_index is:",line_index)
-    if left_open
-        arc_l=end_arc_box[left_index]
-    else
-        arc_l=arc_box[left_index]
-    end
-    if right_open
-        arc_r=end_arc_box[right_index]
-    else
-        arc_r=arc_box[right_index]
-    end
-
-    q1=arc_l.q
-    q2=arc_r.q
-
-    if sign[1] == 1
-        new_arc_l=Arc(q1,[arc_l.period[1],chosen_line.period[2]],ω,arc_l.index_in,line_index+1)
-    else
-        new_arc_l=Arc(q1,[chosen_line.period[2],arc_l.period[2]],ω,line_index,arc_l.index_out)
-    end
-
-    if sign[2] == 1
-        new_arc_r=Arc(q2,[arc_r.period[1],chosen_line.period[1]],ω,arc_r.index_in,line_index)
-    else
-        new_arc_r=Arc(q2,[chosen_line.period[1],arc_r.period[2]],ω,line_index-1,arc_r.index_out)
-    end
-
-    new_line=Line(chosen_line.k-sign[1]*q1+sign[2]*q2 ,chosen_line.period, line_index,false)
-    # w_x=green_zero(chosen_line, m, μ)*phonon_propagator(arc_l)*phonon_propagator(arc_r)
-    # w_y=green_zero(new_line, m, μ)*phonon_propagator(new_arc_l)*phonon_propagator(new_arc_r)
-    total_dis=dispersion(new_line, m, μ)-dispersion(chosen_line, m, μ)
-    total_dis+=arc_dispersion(new_arc_r,ω)+arc_dispersion(new_arc_l,ω)-arc_dispersion(arc_r,ω)-arc_dispersion(arc_l,ω)
-    r=exp(total_dis*diagram.τ)
-    # println(w_y/w_x)
-    # r=ratio*(1+log(ratio)/diagram.dispersion)^(2order+1)
-
-    if r<rand()
-        return false
-    else
-        diagram.dispersion+=total_dis*diagram.τ#log(r)
-        deleteat!(line_box, line_index)
-        insert!(line_box, line_index, new_line)
-        # diagram.total_dispersion+=dispersion(new_line, m, μ)
-        sign_box=diagram.sign_box
-        deleteat!(sign_box, line_index)
-        insert!(sign_box, line_index, [sign[2],sign[1]])
-        sign_box[line_index-1]=[sign_box[line_index-1][1],sign[2]]
-        sign_box[line_index+1]=[sign[1],sign_box[line_index+1][2]]
-
-        if left_open
-            # diagram.total_dispersion-=end_arc_dispersion(end_arc_box[left_index],ω, diagram.τ)
-            deleteat!(end_arc_box, left_index)
-            insert!(end_arc_box, left_index, new_arc_l)
-            # diagram.total_dispersion+=end_arc_dispersion(new_arc_l,ω, diagram.τ)
-        else
-            # diagram.total_dispersion-=arc_dispersion(arc_box[left_index],ω)
-            deleteat!(arc_box, left_index)
-            insert!(arc_box, left_index, new_arc_l)
-            # diagram.total_dispersion+=arc_dispersion(new_arc_l,ω)
-        end
-        if right_open
-            # diagram.total_dispersion-=end_arc_dispersion(end_arc_box[right_index],ω, diagram.τ)
-            deleteat!(end_arc_box, right_index)
-            insert!(end_arc_box, right_index, new_arc_r)
-            # diagram.total_dispersion+=end_arc_dispersion(new_arc_r,ω, diagram.τ)
-        else
-            # diagram.total_dispersion-=arc_dispersion(arc_box[right_index],ω)
-            deleteat!(arc_box, right_index)
-            insert!(arc_box, right_index, new_arc_r)
-            # diagram.total_dispersion+=arc_dispersion(new_arc_r,ω)
-        end
-
-        if new_arc_l.index_out-new_arc_l.index_in == 2
-            line_box[new_arc_l.index_in+1].covered=true
-        end
-
-        if new_arc_r.index_out-new_arc_r.index_in == 2
-            line_box[new_arc_r.index_in+1].covered=true
-        end
-        sign=diagram.sign_box[line_index]
-        shift!(diagram,sign[1],line_index-1,right_index,!right_open,m,μ)
-        shift!(diagram,sign[2],line_index,left_index,!left_open,m,μ)
-        update_arcp!(diagram,order,right_index,!right_open,m,μ)
-        update_arcp!(diagram,order,left_index,!left_open,m,μ)
-        return true
-    end
-end
-
 function extend!(diagram::Diagram)
 
     line_box=diagram.line_box
@@ -920,20 +755,6 @@ function scale!(diagram::Diagram, order::Int64,m::Int64,μ::Float64,ω::Int64, s
     record_τ=diagram.record_τ
     total_dis=diagram.dispersion
     
-    # for line in line_box
-    #     total_dis+=dispersion(line, m, μ)
-    # end
-
-    # for arc in arc_box
-    #     period=arc.period
-    #     total_dis+=-ω*(period[2]-period[1])
-    # end
-
-    # for arc in end_arc_box
-    #     period=arc.period
-    #     total_dis+=-ω*(τ+period[2]-period[1])
-    # end
-
     coef=-τ/total_dis
     #println(coef)
     τ_new=rand(Gamma(2*order+1,coef),samples)
@@ -967,223 +788,21 @@ function set_μ!(diagram::Diagram,new_μ::Float64)
     return diagram
 end
 
+function set_τ!(diagram::Diagram,new_τ::Float64)
+
+    τ=diagram.τ
+    diagram.dispersion/=τ
+    diagram.dispersion*=new_τ
+    diagram.τ=new_τ
+
+    return diagram
+end
+
 function energy(diagram::Diagram)
     total_dis=-diagram.dispersion
     τ=diagram.τ
     order=diagram.order
     return (total_dis-2*order)/τ
-end
-
-function update_arcp!(diagram::Diagram,order::Int64,m::Int64,μ::Float64)
-    
-    if order-1<0
-        return false
-    end
-
-    arc_box=diagram.arc_box
-    end_arc_box = diagram.end_arc_box
-    arc_box_length = length(arc_box)
-    index=rand(1:order)
-    offset_τ=0
-    τ=diagram.τ
-    if index <= arc_box_length
-        arc=arc_box[index]
-        closed_arc = true
-        
-    else
-        arc=end_arc_box[index-arc_box_length]
-        closed_arc = false
-        offset_τ=diagram.τ
-    end
-
-    index_in=arc.index_in
-    index_out=arc.index_out
-    q=arc.q
-
-    line_box=diagram.line_box
-
-    τ_1=arc.period[1]*τ
-    τ_2=arc.period[2]*τ
-    arc_T=abs(offset_τ-abs(τ_2-τ_1))
-
-    phi = rand(Uniform(0,pi*2))
-    costheta = rand(Uniform(-1,1))
-    theta = acos(costheta)
-    x = sin(theta)*cos(phi)
-    y = sin(theta)*sin(phi)
-    z = cos(theta)
-    p = abs(rand(Normal(0,sqrt(m/arc_T)))).*[x,y,z]
-
-    total_dis=0
-
-    open_arc_range = [collect(1:index_out-1); collect(index_in+1:2order+1)]
-
-    if closed_arc
-        for i in index_in+1:index_out-1
-            line_tem=line_box[i]
-            total_dis+=dispersion(line_tem, m, μ)*τ
-            line_tem.k+=q
-            line_tem.k-=p
-            total_dis-=dispersion(line_tem, m, μ)*τ
-        end
-    else
-        for i in open_arc_range
-            line_tem=line_box[i]
-            total_dis+=dispersion(line_tem, m, μ)*τ
-            line_tem.k+=q
-            line_tem.k-=p
-            total_dis-=dispersion(line_tem, m, μ)*τ
-        end       
-    end
-
-    r=exp(-total_dis)
-    r*=exp(-(norm(q)^2-norm(p)^2)/(2m)*arc_T)
-
-    if r<rand()
-        if closed_arc
-            for i in index_in+1:index_out-1
-                line_tem=line_box[i]
-                line_tem.k+=p
-                line_tem.k-=q
-            end
-        else
-            for i in open_arc_range
-                line_tem=line_box[i]
-                line_tem.k+=p
-                line_tem.k-=q
-            end       
-        end
-        return false
-    else
-        diagram.dispersion-=total_dis
-        arc.q=p
-        return true
-    end
-end
-
-function update_arcp!(diagram::Diagram,order::Int64,index::Int64,closed_arc::Bool,m::Int64,μ::Float64)
-
-    arc_box=diagram.arc_box
-    end_arc_box = diagram.end_arc_box
-    arc_box_length = length(arc_box)
-    offset_τ=0
-    τ=diagram.τ
-
-    if closed_arc
-        arc=arc_box[index]
-    else
-        arc=end_arc_box[index]
-        offset_τ=diagram.τ
-    end
-
-    index_in=arc.index_in
-    index_out=arc.index_out
-    q=arc.q
-
-    line_box=diagram.line_box
-
-    τ_1=arc.period[1]*τ
-    τ_2=arc.period[2]*τ
-    arc_T=abs(offset_τ-abs(τ_2-τ_1))
-
-    phi = rand(Uniform(0,pi*2))
-    costheta = rand(Uniform(-1,1))
-    theta = acos(costheta)
-    x = sin(theta)*cos(phi)
-    y = sin(theta)*sin(phi)
-    z = cos(theta)
-    p = abs(rand(Normal(0,sqrt(m/arc_T)))).*[x,y,z]
-
-    total_dis=0
-
-    open_arc_range = [collect(1:index_out-1); collect(index_in+1:2order+1)]
-
-    if closed_arc
-        for i in index_in+1:index_out-1
-            line_tem=line_box[i]
-            total_dis+=dispersion(line_tem, m, μ)*τ
-            line_tem.k+=q
-            line_tem.k-=p
-            total_dis-=dispersion(line_tem, m, μ)*τ
-        end
-    else
-        for i in open_arc_range
-            line_tem=line_box[i]
-            total_dis+=dispersion(line_tem, m, μ)*τ
-            line_tem.k+=q
-            line_tem.k-=p
-            total_dis-=dispersion(line_tem, m, μ)*τ
-        end       
-    end
-
-    r=exp(-total_dis)
-    r*=exp(-(norm(q)^2-norm(p)^2)/(2m)*arc_T)
-
-    if r<rand()
-        if closed_arc
-            for i in index_in+1:index_out-1
-                line_tem=line_box[i]
-                line_tem.k+=p
-                line_tem.k-=q
-            end
-        else
-            for i in open_arc_range
-                line_tem=line_box[i]
-                line_tem.k+=p
-                line_tem.k-=q
-            end       
-        end
-        return false
-    else
-        diagram.dispersion-=total_dis
-        arc.q=p
-        return true
-    end
-end
-
-function shift!(diagram::Diagram,sign::Int64,line_index::Int64,arc_index::Int64,closed_arc::Bool,m::Int64,μ::Float64)
-
-    arc_box=diagram.arc_box
-    end_arc_box = diagram.end_arc_box
-    line_box=diagram.line_box
-    ω=diagram.ω
-    τ=diagram.τ
-
-    if closed_arc
-        arc=arc_box[arc_index]
-    else
-        arc=end_arc_box[arc_index]
-    end
-
-    line=line_box[line_index]
-    line_next=line_box[line_index+1]  
-    diagram.dispersion-=dispersion(line, m, μ)*τ+dispersion(line_next, m, μ)*τ
-    diagram.dispersion-=arc_dispersion(arc, ω)*τ
-    τ_a=line.period[1]*τ
-    τ_c=line_next.period[2]*τ
-    e=(norm(line.k)^2-norm(line_next.k)^2)/(2m)+sign*ω
-    if e>0
-        τ_b=τ_a-log(1-rand()*(1-exp(-e*(τ_c-τ_a))))/e
-    else
-        τ_b=τ_c-log(1-rand()*(1-exp(e*(τ_c-τ_a))))/e
-    end
-
-    # println("e")
-    # println(e)
-    # println((1-exp(-e*(τ_c-τ_a))))
-    # println("tau")
-    # println(τ_b)
-    line.period[2]=τ_b/τ
-    line_next.period[1]=τ_b/τ
-    total_dis=0
-
-    if sign==-1
-        arc.period[1]=τ_b/τ
-    else
-        arc.period[2]=τ_b/τ
-    end
-    diagram.dispersion+=dispersion(line, m, μ)*τ+dispersion(line_next, m, μ)*τ
-    diagram.dispersion+=arc_dispersion(arc, ω)*τ
 end
 
 function total_dis_check(diagram::Diagram)
@@ -1208,4 +827,518 @@ function total_dis_check(diagram::Diagram)
     end
 
     return total_dis
+end
+
+function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int64,α_squared::Float64)
+
+    # println("start")
+    # println(diagram.dispersion)
+    if order-1<0
+        return false
+    end
+    
+    arc_box=diagram.arc_box
+    end_arc_box = diagram.end_arc_box
+    arc_box_length = length(arc_box)
+    index=rand(1:order)
+    # println(index)
+    offset_τ=0
+    τ=diagram.τ
+
+    if index <= arc_box_length
+        arc=arc_box[index]
+        closed_arc = true
+        
+    else
+        arc=end_arc_box[index-arc_box_length]
+        closed_arc = false
+        offset_τ=diagram.τ
+    end
+
+    index_in=arc.index_in
+    index_out_r=arc.index_out
+    # println(index_out_r)
+    q=arc.q
+
+
+    line_box=diagram.line_box
+    line_in=line_box[index_in]
+    line_out=line_box[index_out_r]
+
+    τ_1=arc.period[1]*τ
+    τ_2=arc.period[2]*τ
+    arc_T=abs(offset_τ-abs(τ_2-τ_1))
+
+    τ_2_in=τ_1-log(rand())/ω
+    arc_T_in=τ_2_in-τ_1
+    if arc_T_in > τ
+        println("overlap")
+        return false
+    end
+
+    total_dis=0
+    # w_x=1
+    w_y=exp(-ω*arc_T)*α_squared/(2*pi)^3/norm(q)^2
+
+    open_arc_range = [collect(1:index_out_r-1); collect(index_in+1:2order+1)]
+
+    if closed_arc
+        for i in index_in+1:index_out_r-1
+            line_tem=line_box[i]
+            total_dis-=dispersion(line_tem, m, μ)*τ
+            line_tem.index-=1
+            line_tem.k+=q
+            total_dis+=dispersion(line_tem, m, μ)*τ
+        end
+    else
+        for i in open_arc_range
+            line_tem=line_box[i]
+            total_dis-=dispersion(line_tem, m, μ)*τ
+            line_tem.k+=q
+            total_dis+=dispersion(line_tem, m, μ)*τ
+        end        
+    end
+
+
+    cross_over=false
+    phi = rand(Uniform(0,pi*2))
+    costheta = rand(Uniform(-1,1))
+    theta = acos(costheta)
+    x = sin(theta)*cos(phi)
+    y = sin(theta)*sin(phi)
+    z = cos(theta)
+    q_in = abs(rand(Normal(0,sqrt(m/arc_T_in)))).*[x,y,z]
+
+    τ_R_2=0.0
+    index_out_in=0
+    k_out=0
+
+    if τ_2_in<τ
+        #not set covered yet
+        for i in index_in+1:2order+1
+            line_tem=line_box[i]
+            if line_tem.period[2]<τ_2_in/τ
+                total_dis-=dispersion(line_tem, m, μ)*τ
+                line_tem.k-=q_in
+                total_dis+=dispersion(line_tem, m, μ)*τ
+                continue
+            else
+                k_out=deepcopy(line_tem.k)
+                τ_R_2=deepcopy(line_tem.period[2])
+                line_tem.period[2]=τ_2_in/τ
+                total_dis-=dispersion(line_tem, m, μ)*τ
+                line_tem.k-=q_in
+                line_tem.index+=1
+                total_dis+=dispersion(line_tem, m, μ)*τ
+                index_out_in=i+1
+                break
+            end
+        end
+    else
+        cross_over=true
+        τ_2_in=τ_2_in-τ
+        for i in index_in+1:2order+1
+            line_tem=line_box[i]
+            total_dis-=dispersion(line_tem, m, μ)*τ
+            line_tem.k-=q_in
+            line_tem.index+=1
+            total_dis+=dispersion(line_tem, m, μ)*τ
+        end
+
+        for i in 1:index_in
+            line_tem=line_box[i]
+            if line_tem.period[2]<τ_2_in/τ
+                total_dis-=dispersion(line_tem, m, μ)*τ
+                line_tem.k-=q_in
+                total_dis+=dispersion(line_tem, m, μ)*τ
+                continue
+            else
+                k_out=deepcopy(line_tem.k)
+                τ_R_2=deepcopy(line_tem.period[2])
+                line_tem.period[2]=τ_2_in/τ
+                total_dis-=dispersion(line_tem, m, μ)*τ
+                line_tem.k-=q_in
+                total_dis+=dispersion(line_tem, m, μ)*τ
+                index_out_in=i+1
+                break
+            end
+        end
+        # index_in=index_in+1
+    end
+
+
+    new_arc=Arc(q_in,[τ_1,τ_2_in]/τ,ω,index_in,index_out_in)
+
+    p_x_y=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5#*exp(-ω*arc_T)
+    p_x_y/=exp(-norm(q_in)^2/(2m)*arc_T_in)/(2pi*m/arc_T_in)^0.5#*exp(-ω*arc_T_in)
+    r=exp(total_dis)*p_x_y
+    # println(τ_2_in/τ)
+    # println(index_out_in)
+    # println(index_out_r)
+    if r<rand()
+
+        if !cross_over
+            line_box[index_out_in-1].period[2]=τ_R_2
+            for i in index_in+1:index_out_in-1
+                line_tem=line_box[i]
+                line_tem.index=i
+                line_tem.k+=q_in
+            end
+        else
+            line_box[index_out_in-1].period[2]=τ_R_2
+            for i in index_in+1:2order+1
+                line_tem=line_box[i]
+                line_tem.index=i
+                line_tem.k+=q_in
+            end
+
+            for i in 1:index_out_in-1
+                line_tem=line_box[i]
+                line_tem.index=i
+                line_tem.k+=q_in
+            end
+        end
+
+        if closed_arc
+            for i in index_in+1:index_out_r-1
+                line_tem=line_box[i]
+                line_tem.index+=1
+                line_tem.k-=q
+            end
+        else
+            for i in open_arc_range
+                line_tem=line_box[i]
+                line_tem.k-=q
+            end
+        end    
+        return false
+
+    else
+        # println("closed_arc")
+        # println(closed_arc)
+        # println("cross_over")
+        # println(cross_over)
+        sign_box=diagram.sign_box
+        diagram.dispersion+=total_dis
+        diagram.dispersion+=(arc_T-arc_T_in)*ω 
+        # arc_box=diagram.arc_box
+        # end_arc_box = diagram.end_arc_box
+        if closed_arc
+            deleteat!(arc_box, index)
+        else
+            deleteat!(end_arc_box, index-arc_box_length)
+        end
+        # println(diagram.arc_box)
+        # println(q_in)
+
+        if index_out_r == index_out_in
+            # println("s1")
+            line_tem=line_box[index_out_r]
+            line_tem.period[1]=τ_2_in/τ
+        elseif index_out_r == index_out_in-1
+            # println("s2")
+            line_tem_1=line_box[index_out_r-1]
+            line_tem_2=line_box[index_out_r]
+            τ_c=line_tem_2.period[2]
+            line_tem_1.period[2]=τ_c
+            deleteat!(line_box, index_out_r)
+            line_tem_3=Line(k_out,[τ_c,τ_R_2], index_out_r, false)
+            insert!(line_box, index_out_r, line_tem_3)
+            new_arc.index_out=index_out_r
+        else
+            line_tem_1=line_box[index_out_r-1]
+            line_tem_2=line_box[index_out_r]
+            τ_c=line_tem_2.period[2]
+            line_tem_1.period[2]=τ_c
+
+            line_tem_3=Line(k_out,[τ_2_in/τ,τ_R_2], index_out_in, false)
+            # insert!(line_box, index_out_in, line_tem_3)
+
+            deleteat!(line_box, index_out_r)
+            sign_to_add=[sign_box[index_out_r-1][1],sign_box[index_out_r][2]]
+            deleteat!(sign_box, index_out_r-1:index_out_r)
+            insert!(sign_box, index_out_r-1, sign_to_add)
+            if closed_arc
+                if index_out_in>index_out_r
+                    # println("s3")
+                    index_out_in-=1
+                    new_arc.index_out=index_out_in
+                    insert!(line_box, index_out_in, line_tem_3)
+                    sign_to_add=[[sign_box[index_out_in-1][1],1],[1,sign_box[index_out_in-1][2]]]
+                    deleteat!(sign_box,index_out_in-1)
+
+                    for i in 1:2
+                        insert!(sign_box, index_out_in-1, sign_to_add[3-i])
+                    end
+                elseif index_out_in<index_out_r && !cross_over
+                    # println("s4")
+                    insert!(line_box, index_out_in, line_tem_3)
+                    sign_to_add=[[sign_box[index_out_in-1][1],1],[1,sign_box[index_out_in-1][2]]]
+                    deleteat!(sign_box,index_out_in-1)
+
+                    for i in 1:2
+                        insert!(sign_box, index_out_in-1, sign_to_add[3-i])
+                    end
+                else
+                    # println("s5")
+                    new_arc.index_in+=1
+                    insert!(line_box, index_out_in, line_tem_3)
+                    sign_to_add=[[sign_box[index_out_in-1][1],1],[1,sign_box[index_out_in-1][2]]]
+                    deleteat!(sign_box,index_out_in-1)
+
+                    for i in 1:2
+                        insert!(sign_box, index_out_in-1, sign_to_add[3-i])
+                    end
+                end
+            else
+                if index_out_in>index_out_r && cross_over
+                    index_out_in-=1
+                    new_arc.index_out=index_out_in
+                    insert!(line_box, index_out_in, line_tem_3)
+                    sign_to_add=[[sign_box[index_out_in-1][1],1],[1,sign_box[index_out_in-1][2]]]
+                    deleteat!(sign_box,index_out_in-1)
+
+                    for i in 1:2
+                        insert!(sign_box, index_out_in-1, sign_to_add[3-i])
+                    end
+                elseif index_out_in>index_out_r && !cross_over
+                    index_out_in-=1
+                    new_arc.index_out=index_out_in
+                    new_arc.index_in-=1
+                    insert!(line_box, index_out_in, line_tem_3)
+                    sign_to_add=[[sign_box[index_out_in-1][1],1],[1,sign_box[index_out_in-1][2]]]
+                    deleteat!(sign_box,index_out_in-1)
+
+                    for i in 1:2
+                        insert!(sign_box, index_out_in-1, sign_to_add[3-i])
+                    end
+                else
+                    # new_arc.index_in+=1
+                    insert!(line_box, index_out_in, line_tem_3)
+                    sign_to_add=[[sign_box[index_out_in-1][1],1],[1,sign_box[index_out_in-1][2]]]
+                    deleteat!(sign_box,index_out_in-1)
+
+                    for i in 1:2
+                        insert!(sign_box, index_out_in-1, sign_to_add[3-i])
+                    end
+                end
+            end
+        end
+        #delete
+
+        index_in=arc.index_in
+        index_out=arc.index_out
+
+        if closed_arc
+            for arc in diagram.arc_box
+                # total_dispersion+=arc_dispersion(arc,ω)
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_out<=index_in
+                    continue
+                elseif arc_index_in>=index_out
+                    arc.index_in-=2
+                    arc.index_out-=2
+                elseif arc_index_in<index_in && arc_index_out>index_out
+                    arc.index_out-=2
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                elseif arc_index_in>index_in && arc_index_out<index_out
+                    arc.index_in-=1
+                    arc.index_out-=1
+                elseif index_in<arc_index_in<index_out
+                    arc.index_in-=1
+                    arc.index_out-=2
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                elseif index_in<arc_index_out<index_out
+                    arc.index_out-=1
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                end
+            end
+
+            for arc in diagram.end_arc_box
+                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_in < index_in
+                    continue
+                elseif arc_index_out > index_out
+                    arc.index_in-=2
+                    arc.index_out-=2
+                elseif arc_index_out <= index_in && arc_index_in >= index_out
+                    arc.index_in-=2
+                elseif arc_index_out > index_in && arc_index_in < index_out
+                    arc.index_in-=1
+                    arc.index_out-=1
+                elseif index_in < arc_index_out < index_out
+                    arc.index_out-=1
+                    arc.index_in-=2
+                elseif index_in < arc_index_in < index_out
+                    arc.index_in-=1
+                end
+            end
+
+        else
+            for arc in diagram.arc_box
+                # total_dispersion+=arc_dispersion(arc,ω)
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_out < index_out
+                    continue
+                elseif arc_index_in > index_in
+                    arc.index_in-=2
+                    arc.index_out-=2
+                elseif arc_index_in < index_out && arc_index_out > index_in
+                    arc.index_out-=2
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                elseif arc_index_in >= index_out && arc_index_out <= index_in
+                    arc.index_in-=1
+                    arc.index_out-=1
+                elseif index_out <= arc_index_in < index_in
+                    arc.index_in-=1
+                    arc.index_out-=2
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                elseif index_out < arc_index_out <= index_in
+                    arc.index_out-=1
+                    if arc.index_out-arc.index_in == 2
+                        line_box[arc.index_in+1].covered=true
+                    end
+                end
+            end
+            
+            for arc in diagram.end_arc_box
+                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_in < index_out
+                    continue
+                elseif arc_index_out > index_in
+                    arc.index_in-=2
+                    arc.index_out-=2
+                elseif arc_index_out < index_out && arc_index_in > index_in
+                    arc.index_in-=2
+                elseif arc_index_out > index_out && arc_index_in < index_in
+                    arc.index_in-=1
+                    arc.index_out-=1
+                elseif index_out < arc_index_out <= index_in
+                    arc.index_in-=2
+                    arc.index_out-=1
+                elseif index_out <= arc_index_in < index_in
+                    arc.index_in-=1
+                end
+            end
+            diagram.component-=1
+        end
+
+        #insert
+        index_in=new_arc.index_in
+        index_out=new_arc.index_out
+        if !cross_over
+            for arc in diagram.arc_box
+                # total_dispersion+=arc_dispersion(arc,ω)
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_out<=index_in
+                    continue
+                elseif arc_index_in>=index_out-2
+                    arc.index_in+=2
+                    arc.index_out+=2
+                elseif arc_index_in<index_in && arc_index_out>index_out-2
+                    arc.index_out+=2
+                elseif arc_index_in>=index_in && arc_index_out<=index_out-2
+                    arc.index_in+=1
+                    arc.index_out+=1
+                elseif index_in<=arc_index_in<index_out-2
+                    arc.index_in+=1
+                    arc.index_out+=2
+                elseif index_in<arc_index_out<=index_out-2
+                    arc.index_out+=1
+                end
+            end
+
+            for arc in diagram.end_arc_box
+                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_in<index_in
+                    continue
+                elseif arc_index_out>index_out-2
+                    arc.index_in+=2
+                    arc.index_out+=2
+                elseif arc_index_in>=index_out-2 && arc_index_out<=index_in
+                    arc.index_in+=2
+                elseif arc_index_in<index_out-2 && arc_index_out>index_in
+                    arc.index_in+=1
+                    arc.index_out+=1
+                elseif arc_index_out>index_in && arc_index_in>=index_out-2
+                    arc.index_in+=2
+                    arc.index_out+=1
+                elseif index_in>=arc_index_out && arc_index_in<index_out-2
+                    arc.index_in+=1
+                end
+            end
+        else
+            for arc in diagram.arc_box
+                # total_dispersion+=arc_dispersion(arc,ω)
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_out<=index_out-1
+                    continue
+                elseif arc_index_in>=index_in-1
+                    arc.index_in+=2
+                    arc.index_out+=2
+                elseif arc_index_in>=index_out-1 && arc_index_out<=index_in-1
+                    arc.index_in+=1
+                    arc.index_out+=1
+                elseif arc_index_in<index_out-1 && arc_index_out<=index_in-1
+                    arc.index_out+=1
+                elseif arc_index_in<index_out-1 && arc_index_out>index_in-1
+                    arc.index_out+=2
+                elseif arc_index_in>=index_out-1 && arc_index_out>index_in-1
+                    arc.index_in+=1
+                    arc.index_out+=2
+                end
+            end
+
+            for arc in diagram.end_arc_box
+                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
+                arc_index_in = arc.index_in
+                arc_index_out = arc.index_out
+                if arc_index_in<index_out-1
+                    continue
+                elseif arc_index_out>index_in-1
+                    arc.index_in+=2
+                    arc.index_out+=2
+                elseif arc_index_in>=index_in-1 && arc_index_out<=index_out-1
+                    arc.index_in+=2
+                elseif arc_index_in<index_in-1 && arc_index_out<=index_out-1
+                    arc.index_in+=1
+                elseif arc_index_in<index_in-1 && arc_index_out>index_out-1
+                    arc.index_in+=1
+                    arc.index_out+=1
+                elseif arc_index_in>=index_in-1 && arc_index_out>index_out-1
+                    arc.index_out+=1
+                    arc.index_in+=2
+                end
+            end
+        end
+        # println("insert")
+        if !cross_over
+            push!(diagram.arc_box,new_arc)
+        else
+            push!(diagram.end_arc_box,new_arc)
+            diagram.component+=1
+        end
+
+        return true
+    end
 end

@@ -63,7 +63,7 @@ mutable struct Diagram
 
     function Diagram(p::Real, max_τ::Real, max_order::Int64, mass::Int64, μ::Real, ω::Int64, α::Real, 
         p_ins::Float64=0.5, p_rem::Float64=0.5)
-        τ = 10#/ω+rand()*max_τ
+        τ = 20#/ω+rand()*max_τ
         #τ = 10.5
         new(mass, μ, ω, α, [p,0,0], τ, [], max_τ, 0, 0, max_order, [], [],
         [Line([p,0,0], [0, 1.0], 1,false)], [[0,0]],p_ins, p_rem,-τ*(norm(p)^2/(2*mass)-μ))
@@ -165,4 +165,16 @@ function check_timeorder(diagram::Diagram)
     end
 
     println("index_box",index_box)
+    return index_box
+end
+
+function check_k(diagram::Diagram)
+    index_box=[]
+    for index in 1:length(diagram.line_box)
+        line=diagram.line_box[index]
+        push!(index_box,[line.k[1],line.k[2],line.k[3]])
+    end
+
+    println("index_box",index_box)
+    return index_box
 end
