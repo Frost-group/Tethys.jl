@@ -237,7 +237,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             else
                 line_tem=Line(k_out,[τ_L,τ_2]/τ, index_in-1, false)
                 insert!(line_box, index_out-1, line_tem)
-                line_tem=Line(k_in,[τ_1,τ_R]/τ, index_in+1, false)
+                line_tem=Line(k_out,[τ_1,τ_R]/τ, index_in+1, false)
                 insert!(line_box, index_in+1, line_tem)
             end
         end

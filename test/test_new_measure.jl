@@ -9,12 +9,12 @@ using Base.Threads
 using LaTeXStrings
 
 begin
-    α=1.0; p=1.5
+    α=10.0; p=0.0
     max_τ=100.0; max_order=5000;
     n_loop=100; n_hist=100000; sample_freq=200;
     diagram = initialise_diagram(α, p, max_τ, max_order)
     estimators = Estimators_Record(max_τ, max_order, sample_freq, n_loop, n_hist)
-    diagram, estimators, variance = simulate!(diagram, estimators, false)
+    diagram, estimators, variance = simulate!(diagram, estimators, true)
 end
 
 begin
