@@ -312,6 +312,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
                 line_tem=Line(k_out,[τ_L,τ_2]/τ, index_in-1, false)
                 insert!(line_box, index_out-1, line_tem)
                 line_tem=Line(k_out,[τ_1,τ_R]/τ, index_in+1, false)
+                line_tem=Line(k_out,[τ_1,τ_R]/τ, index_in+1, false)
                 insert!(line_box, index_in+1, line_tem)
             end
         end
@@ -912,6 +913,8 @@ function mass_estimator(diagram::Diagram)
     line_box=diagram.line_box
     p_squared = [0.0, 0.0, 0.0]
     τ=diagram.τ
+    m=diagram.mass
+    μ=diagram.μ
     for line in line_box
         p_squared .+= p_dispersion(line, m, μ) .*2
     end
