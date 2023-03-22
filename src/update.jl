@@ -64,6 +64,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
     τ_1=rand(Uniform(τ_L,τ_R))
     τ_2=τ_1-log(rand())/ω
+    #τ_2=τ_1+rand(Uniform(0,τ))
 
     arc_T=τ_2-τ_1
 
@@ -73,7 +74,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
     line.period[1]=τ_1/τ
     arc_T=τ_2-τ_1
-    # q=MVector{3}(rand(Normal(0,sqrt(m/arc_T)),3))
+    #q=MVector{3}(rand(Normal(0,sqrt(m/arc_T)),3))
     phi = rand(Uniform(0,pi*2))
     costheta = rand(Uniform(-1,1))
     theta = acos(costheta)
@@ -81,6 +82,11 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     y = sin(theta)*sin(phi)
     z = cos(theta)
     q = abs(rand(Normal(0,sqrt(m/arc_T)))).*[x,y,z]
+
+    #ave = [0.0, 0.0, 0.0]
+    #cov = [m/arc_T 0 0; 0 m/arc_T 0; 0 0 m/arc_T]
+    #d = MvNormal(ave, cov)
+    #q = rand(d)
 
     w_x=1.0
     w_y=1.0
@@ -155,16 +161,27 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         index_in=index_in+1
     end
 
-
     new_arc=Arc(q,[τ_1,τ_2]/τ,ω,index_in,index_out)
 
     p_x_y=diagram.p_ins*ω/(1-exp(-ω*(τ)))/(2order+1)/(τ_R-τ_L)
     p_x_y*=1/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5#*1.0/norm(q)^2
-    p_y_x=diagram.p_rem/(order+1)
+
+    if !cross_over
+        p_y_x=diagram.p_rem/(order+1)
+        #p_y_x=diagram.p_rem/(length(diagram.arc_box)+1)
+    else
+        p_y_x=diagram.p_rem/(order+1)
+        #p_y_x=diagram.p_rem/(diagram.component+1)
+    end
     r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3)#*norm(q)^2
     # coef_old=-diagram.dispersion/τ
     # coef_new=-(diagram.dispersion-total_dis-arc_T*ω)/τ
     # r*=1/(2order+2)/(2order+1)*(coef_new/coef_old)^(2order+1)*coef_new^2
+
+    #p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)
+    #p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
+    #p_y_x=diagram.p_rem/(order+1)
+    #r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
 
     if r<rand()
         if !cross_over
@@ -409,6 +426,9 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     if index <= arc_box_length
         arc=arc_box[index]
         closed_arc = true
+        if arc.index_out-arc.index_in == 1
+            return false
+        end
         
     else
         arc=end_arc_box[index-arc_box_length]
@@ -477,11 +497,22 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     p_x_y=diagram.p_ins*ω/(1-exp(-ω*(τ)))/(2order-1)/(τ_R-τ_L)
     p_x_y*=1.0/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5#exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
 
-    p_y_x=diagram.p_rem/order
+    if closed_arc
+        p_y_x=diagram.p_rem/order
+        #p_y_x=diagram.p_rem/length(diagram.arc_box)
+    else
+        p_y_x=diagram.p_rem/order
+        #p_y_x=diagram.p_rem/diagram.component
+    end
     r=((2*pi)^3*p_x_y)/(exp(total_dis)*p_y_x*α_squared)#*norm(q)^2
     # coef_old=-diagram.dispersion/τ
     # coef_new=-(diagram.dispersion-total_dis+arc_T*ω)/τ
     # r*=(2order)*(2order-1)*(coef_new/coef_old)^(2order-1)/coef_old^2
+    #p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)
+    #p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
+
+    #p_y_x=diagram.p_rem/order
+    #r=((2*pi)^3*p_x_y*norm(q)^2)/(exp(total_dis)*p_y_x*α_squared)
 
     if r<rand()
         if closed_arc
@@ -713,6 +744,180 @@ function arc_judge(arc::Arc,sign::Int64,bound::Bool,index::Int64)
     end
 end
 
+function swap_arc!(diagram::Diagram)
+
+    order=diagram.order
+    m=diagram.mass
+    μ=diagram.μ
+    ω=diagram.ω
+
+    if order<2
+        return false
+    end
+
+    line_box=diagram.line_box
+    line_index=rand(2:2*order)
+    chosen_line=line_box[line_index]
+
+    if chosen_line.covered
+        return false
+    end
+
+    sign=diagram.sign_box[line_index]
+    arc_box=diagram.arc_box
+    end_arc_box=diagram.end_arc_box
+    arc_box_length = length(arc_box)
+    left_check=false
+    right_check=false
+    left_open=false
+    right_open=false
+    left_index=0
+    right_index=0
+
+    for i in 1:arc_box_length
+        arc=arc_box[i]
+        if !left_check
+            if arc_judge(arc,sign[1],false,line_index)
+                left_index=i
+                left_check=true
+            end
+        end
+
+        if !right_check
+            if arc_judge(arc,sign[2],true,line_index)
+                right_index=i
+                right_check=true
+            end
+        end
+
+        if right_check && left_check
+            break
+        end
+    end
+    for i in 1:length(end_arc_box)
+        arc=end_arc_box[i]
+        if !left_check
+            if arc_judge(arc,sign[1],false,line_index)
+                left_index=i
+                left_check=true
+                left_open=true
+            end
+        end
+
+        if !right_check
+            if arc_judge(arc,sign[2],true,line_index)
+                right_index=i
+                right_check=true
+                right_open=true
+            end
+        end
+
+        if right_check && left_check
+            break
+        end
+    end
+
+    if right_open && left_open && right_index == left_index
+        return false
+    end
+
+    #if right_open || left_open
+    #    return false
+    #end
+
+    # println(right_check,left_check)
+    # println("swap_index is:",line_index)
+    if left_open
+        arc_l=end_arc_box[left_index]
+    else
+        arc_l=arc_box[left_index]
+    end
+    if right_open
+        arc_r=end_arc_box[right_index]
+    else
+        arc_r=arc_box[right_index]
+    end
+
+    q1=arc_l.q
+    q2=arc_r.q
+
+    if sign[1] == 1
+        new_arc_l=Arc(q1,[arc_l.period[1],chosen_line.period[2]],ω,arc_l.index_in,line_index+1)
+    else
+        new_arc_l=Arc(q1,[chosen_line.period[2],arc_l.period[2]],ω,line_index,arc_l.index_out)
+    end
+
+    if sign[2] == 1
+        new_arc_r=Arc(q2,[arc_r.period[1],chosen_line.period[1]],ω,arc_r.index_in,line_index)
+    else
+        new_arc_r=Arc(q2,[chosen_line.period[1],arc_r.period[2]],ω,line_index-1,arc_r.index_out)
+    end
+
+    new_line=Line(chosen_line.k-sign[1]*q1+sign[2]*q2 ,chosen_line.period, line_index,false)
+    # w_x=green_zero(chosen_line, m, μ)*phonon_propagator(arc_l)*phonon_propagator(arc_r)
+    # w_y=green_zero(new_line, m, μ)*phonon_propagator(new_arc_l)*phonon_propagator(new_arc_r)
+    total_dis=dispersion(new_line, m, μ)-dispersion(chosen_line, m, μ)
+    total_dis+=arc_dispersion(new_arc_r,ω)+arc_dispersion(new_arc_l,ω)-arc_dispersion(arc_r,ω)-arc_dispersion(arc_l,ω)
+    r=exp(total_dis*diagram.τ)
+    # println(w_y/w_x)
+    # r=ratio*(1+log(ratio)/diagram.dispersion)^(2order+1)
+
+    if ω*abs(chosen_line.period[2]-chosen_line.period[1])*diagram.τ > -log(0.98)
+        return false
+    end
+
+    if r<rand()
+        return false
+    else
+        diagram.dispersion+=total_dis*diagram.τ#log(r)
+        deleteat!(line_box, line_index)
+        insert!(line_box, line_index, new_line)
+        # diagram.total_dispersion+=dispersion(new_line, m, μ)
+        sign_box=diagram.sign_box
+        deleteat!(sign_box, line_index)
+        insert!(sign_box, line_index, [sign[2],sign[1]])
+        sign_box[line_index-1]=[sign_box[line_index-1][1],sign[2]]
+        sign_box[line_index+1]=[sign[1],sign_box[line_index+1][2]]
+
+        if left_open
+            # diagram.total_dispersion-=end_arc_dispersion(end_arc_box[left_index],ω, diagram.τ)
+            deleteat!(end_arc_box, left_index)
+            insert!(end_arc_box, left_index, new_arc_l)
+            # diagram.total_dispersion+=end_arc_dispersion(new_arc_l,ω, diagram.τ)
+        else
+            # diagram.total_dispersion-=arc_dispersion(arc_box[left_index],ω)
+            deleteat!(arc_box, left_index)
+            insert!(arc_box, left_index, new_arc_l)
+            # diagram.total_dispersion+=arc_dispersion(new_arc_l,ω)
+        end
+        if right_open
+            # diagram.total_dispersion-=end_arc_dispersion(end_arc_box[right_index],ω, diagram.τ)
+            deleteat!(end_arc_box, right_index)
+            insert!(end_arc_box, right_index, new_arc_r)
+            # diagram.total_dispersion+=end_arc_dispersion(new_arc_r,ω, diagram.τ)
+        else
+            # diagram.total_dispersion-=arc_dispersion(arc_box[right_index],ω)
+            deleteat!(arc_box, right_index)
+            insert!(arc_box, right_index, new_arc_r)
+            # diagram.total_dispersion+=arc_dispersion(new_arc_r,ω)
+        end
+
+        if new_arc_l.index_out-new_arc_l.index_in == 2
+            line_box[new_arc_l.index_in+1].covered=true
+        end
+
+        if new_arc_r.index_out-new_arc_r.index_in == 2
+            line_box[new_arc_r.index_in+1].covered=true
+        end
+        sign=diagram.sign_box[line_index]
+        #shift!(diagram,sign[1],line_index-1,right_index,!right_open,m,μ)
+        #shift!(diagram,sign[2],line_index,left_index,!left_open,m,μ)
+        #update_arcp!(diagram,order,right_index,!right_open,m,μ)
+        #update_arcp!(diagram,order,left_index,!left_open,m,μ)
+        return true
+    end
+end
+
 function extend!(diagram::Diagram)
 
     line_box=diagram.line_box
@@ -799,6 +1004,12 @@ function set_τ!(diagram::Diagram,new_τ::Float64)
     return diagram
 end
 
+function set_α!(diagram::Diagram,new_α::Float64)
+
+    diagram.α=new_α
+    return diagram
+end
+
 function energy(diagram::Diagram)
     total_dis=-diagram.dispersion
     τ=diagram.τ
@@ -809,15 +1020,15 @@ end
 
 function mass_estimator(diagram::Diagram)
     line_box=diagram.line_box
-    p_squared = [0.0, 0.0, 0.0]
+    mean_p = [0.0, 0.0, 0.0]
     τ=diagram.τ
     m=diagram.mass
     μ=diagram.μ
     for line in line_box
-        p_squared .+= p_dispersion(line, m, μ) .*2
+        mean_p .+= p_dispersion(line)
     end
     #return 1 / (1 - (norm(p_squared)^2)*τ/(3))
-    return (norm(p_squared)^2)
+    return (norm(mean_p)^2)
 end
 
 function total_dis_check(diagram::Diagram)

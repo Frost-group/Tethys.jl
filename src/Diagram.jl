@@ -63,7 +63,7 @@ mutable struct Diagram
 
     function Diagram(p::Real, max_τ::Real, max_order::Int64, mass::Int64, μ::Real, ω::Int64, α::Real, 
         p_ins::Float64=0.5, p_rem::Float64=0.5)
-        τ = 40#/ω+rand()*max_τ
+        τ = 20#/ω+rand()*max_τ
         #τ = 10.5
         new(mass, μ, ω, α, [p,0,0], τ, [], max_τ, 0, 0, max_order, [], [],
         [Line([p,0,0], [0, 1.0], 1,false)], [[0,0]],p_ins, p_rem,-τ*(norm(p)^2/(2*mass)-μ))
@@ -102,11 +102,11 @@ function dispersion(line::Line, m::Int64, μ::Float64)
     #return -τ*(fast_norm(p)/(2m)-μ)
 end
 
-function p_dispersion(line::Line, m::Int64, μ::Float64)
+function p_dispersion(line::Line)
     p=line.k
     τ=line.period[2]-line.period[1]
 
-    return (p ./(2m) .-μ) .*τ
+    return p .*τ
 end
 
 function dispersion(arc::Arc,ω::Int64)

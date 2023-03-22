@@ -50,6 +50,14 @@ function VMC_energy(α)
     return F(v, w, α)
 end
 
+function polaron_effective_mass(α)
+    v,w = feynmanvw(α)
+    massF(τ,v,w)=(abs(w^2 * τ + (v^2-w^2)/v*(1-exp(-v*τ))))^-1.5 * exp(-τ) * τ^2
+    intF(v,w,α)=(1/3)*π^(-0.5) * α*v^(3) * quadgk(τ->massF(τ,v,w),0,Inf)[1]
+
+    return 1+intF(v,w,α)
+end
+
 function jackknife_energy(energy_samples)
     energy_array = deepcopy(energy_samples)
     energy_array_sum = sum(energy_array)
@@ -135,11 +143,15 @@ function simulate!(diagram::Diagram,estimators::Estimators_Record, swap_arc=fals
                 end
             end
 
+            dia_order=diagram.order
+
             if !result && swap_arc
                 result = swap_arc!(diagram)
+                #result = resample_arc!(diagram,dia_order,m,μ,ω,α_squared)
+                #swap_arc!(diagram)
             end
 
-            dia_order=diagram.order
+            
             #scale!(diagram,dia_order,m,μ,ω,1)
             #update_arcp!(diagram,dia_order,m,μ)
 
@@ -165,11 +177,16 @@ function simulate!(diagram::Diagram,estimators::Estimators_Record, swap_arc=fals
                 p_record[estimator_index] = p_value
                 if estimator_index == 1  
                     energy_mean[estimator_index] = mean(energy_record[1:estimator_index])
-                    mass_mean[estimator_index] = 1/(1-mean(p_record[1:estimator_index])*τ/3)
+                    #mass_mean[estimator_index] = 1/(1-mean(p_record[1:estimator_index])*τ/3)
+                    #mass_mean[estimator_index] = result[2]
+                    mass_mean[estimator_index] = τ/(2*dia_order+1)
                 else
                     energy_mean[estimator_index] = (E_value + energy_mean[estimator_index-1]*(estimator_index-1))/estimator_index
                     p_mean = (p_value + (3/τ)*(1-1/mass_mean[estimator_index-1])*(estimator_index-1))/estimator_index
-                    mass_mean[estimator_index] = 1/(1-p_mean*τ/3)
+                    #mass_mean[estimator_index] = 1/(1-p_mean*τ/3)
+                    mass_mean[estimator_index] = τ/(2*dia_order+1)
+                    #mass_mean[estimator_index] = diagram.line_box[1].period[2]-diagram.line_box[1].period[1]
+                    #mass_mean[estimator_index] = result[2]
                 end
                 
             end
