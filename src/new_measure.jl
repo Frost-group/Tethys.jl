@@ -12,6 +12,7 @@ using Dates
 using CSV, DataFrames
 using JLD2,FileIO
 using PolaronMobility
+using QuadGK
 
 mutable struct Estimators_Record
 

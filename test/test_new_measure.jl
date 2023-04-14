@@ -7,16 +7,41 @@ using Logging
 using Statistics
 using Base.Threads
 using LaTeXStrings
-using QuadGK
 
 begin
-    α=15.0; p=0.0
+    α=7.0; p=0.0
     max_τ=1000.0; max_order=5000;
-    n_loop=100; n_hist=100000; sample_freq=200;
+    n_loop=500; n_hist=100000; sample_freq=200;
     diagram = initialise_diagram(α, p, max_τ, max_order)
     estimators = Estimators_Record(max_τ, max_order, sample_freq, n_loop, n_hist)
-    diagram, estimators, variance = simulate!(diagram, estimators,true)
+    diagram, estimators, variance = simulate!(diagram, estimators,false)
 end
+
+begin
+    plot_font = "Computer Modern"
+    default(fontfamily=plot_font, dpi = 500)
+
+    plot(estimators.energy_mean[10:end], label = "DiagMC", ylab = L"$\langle E_{0}(\alpha=1)\rangle$",
+    xlab = "Samples", framestyle = :box, xtickfontsize=8,ytickfontsize=9, color=:red,
+    xguidefontsize = 12, linewidth=1.5, markerstrokewidth=1.0, legendfontsize = 11, legend=:topright,
+    foreground_color_legend = nothing, extra_kwargs=Dict(:subplot=>Dict(:legend_hfactor=>1.25)),
+    yguidefontsize=14)
+    hline!([VMC_energy(1)], linestyle=:dash, label = "Feynman", linecolor=:black, linewidth=1.0)
+    #savefig("C:/Users/60125/OneDrive - Imperial College London/Y4 Masters Project/Graphics/mean_energy_evolution_1")
+end
+
+begin
+    plot_font = "Computer Modern"
+    default(fontfamily=plot_font, dpi = 500)
+
+    plot!(estimators.order_box[1:200], label = L"\alpha=7", ylab = "Order Distribution",
+    xlab = L"N_{arcs}", framestyle = :box, xtickfontsize=8,ytickfontsize=9,
+    xguidefontsize = 12, linewidth=1.0, markerstrokewidth=1.0, legendfontsize = 11, legend=:topright,
+    foreground_color_legend = nothing, extra_kwargs=Dict(:subplot=>Dict(:legend_hfactor=>1.25)),
+    yguidefontsize=10)
+    #savefig("C:/Users/60125/OneDrive - Imperial College London/Y4 Masters Project/Graphics/diagram_order")
+end
+
 
 begin
     histogram(estimators.mass_mean[10000:end], label = "No Swap", xlab = "Mean line length", ylab = "Frequency")
@@ -24,7 +49,7 @@ end
 
 begin
     histogram!(estimators.mass_mean[10000:end], label = "Swap", xlab = "Mean line length", ylab = "Frequency", alpha = 0.3)
-    savefig("C:/Users/60125/OneDrive - Imperial College London/Y4 Masters Project/Graphics/mean_line_length_15")
+    #savefig("C:/Users/60125/OneDrive - Imperial College London/Y4 Masters Project/Graphics/mean_line_length_15")
 end
 
 begin
@@ -386,6 +411,7 @@ begin
     k_list_total = vcat(collect(range(0, 2.0, length=25))[1:18], collect(range(1.5, 1.9, length=10))[1:8])
     variance_klist_total = vcat(variance_klist[1:18], variance_klist2[1:8])
     quadratic(t, p) = p[1].+p[2].*t.+p[3].*t.*t
+    pertub(k) = k^2/2 - (sqrt(2)/k)*asin(k/sqrt(2))-0.0026
     p0=[0.0,-1.0,1.0]
     w=1 ./sqrt.(variance_klist_total[1:8])
     fit = curve_fit(quadratic, k_list_total[1:8], energy_klist_total[1:8], w,p0)
@@ -397,6 +423,7 @@ begin
     guidefontsize = 14, linewidth=2.0, markerstrokewidth=1.0, legendfontsize = 10, legend=:topleft,
     foreground_color_legend = nothing, extra_kwargs=Dict(:subplot=>Dict(:legend_hfactor=>1.25)))
     plot!(k_list_total, quadratic(k_list_total, fit.param), label = "Parabolic fit", linestyle=:dash, linecolor=:red)
+    plot!(collect(range(0, sqrt(2), length=100)), pertub.(collect(range(0, sqrt(2), length=100))), label = "Perturbation", linecolor=:green)
     hline!([energy_klist_total[1]+1], linestyle=:dot, label = "Continuum edge", linecolor=:grey)
     #plot!(alpha_plot_list, VMC_plot_list, label = "Feynman")
 
