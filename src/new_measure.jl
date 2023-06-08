@@ -2,6 +2,7 @@ include("Diagram.jl")
 include("update.jl")
 include("zero_update.jl")
 include("measure.jl")
+include("autocorrelation.jl")
 using Random
 using LsqFit
 using JLD2
@@ -178,14 +179,14 @@ function simulate!(diagram::Diagram,estimators::Estimators_Record, swap_arc=fals
                 p_record[estimator_index] = p_value
                 if estimator_index == 1  
                     energy_mean[estimator_index] = mean(energy_record[1:estimator_index])
-                    #mass_mean[estimator_index] = 1/(1-mean(p_record[1:estimator_index])*τ/3)
+                    mass_mean[estimator_index] = 1/(1-mean(p_record[1:estimator_index])*τ/3)
                     #mass_mean[estimator_index] = result[2]
-                    mass_mean[estimator_index] = τ/(2*dia_order+1)
+                    #mass_mean[estimator_index] = τ/(2*dia_order+1)
                 else
                     energy_mean[estimator_index] = (E_value + energy_mean[estimator_index-1]*(estimator_index-1))/estimator_index
                     p_mean = (p_value + (3/τ)*(1-1/mass_mean[estimator_index-1])*(estimator_index-1))/estimator_index
-                    #mass_mean[estimator_index] = 1/(1-p_mean*τ/3)
-                    mass_mean[estimator_index] = τ/(2*dia_order+1)
+                    mass_mean[estimator_index] = 1/(1-p_mean*τ/3)
+                    #mass_mean[estimator_index] = τ/(2*dia_order+1)
                     #mass_mean[estimator_index] = diagram.line_box[1].period[2]-diagram.line_box[1].period[1]
                     #mass_mean[estimator_index] = result[2]
                 end
