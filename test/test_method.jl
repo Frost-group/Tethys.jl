@@ -9,13 +9,13 @@ using JLD2
 using FFTW
 using Logging
 using Statistics
-
+using LaTeXStrings
 
 begin
     n_loop=200000
     num_samples=20
-    n_hist=100000
-    α=1.0#20#5#20
+    n_hist=50000
+    α=20.0#20#5#20
     μ=0#-48#-47.1#-6.3#-47#3.5#9.2
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=2000; mass=1; ω=1;
@@ -24,13 +24,22 @@ begin
 end
 
 begin
+    p_record=[]
     record=[]
+    order_se=[]
 end
 
 begin
-    α=11#20.0
+    p=2
+    diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
+    append!(p_record,p)
+end
+
+
+begin
+    α=1#20#20.0
     diagram.α=α
-    set_τ!(diagram,30.0)
+    set_τ!(diagram,20.0)
     n_loop=200000
     p_ins=0.2;p_rem=0.2;p_from_0=1;
     real_normalized=[p_ins,p_rem]
@@ -71,6 +80,7 @@ begin
     println("begin")
     for j in 1:n_loop
         println("loop.number:",j)
+        order_box= zeros(max_order)
         for i in 1:n_hist
             q=rand()
             # if !result
@@ -143,7 +153,7 @@ begin
             # end
             E_value=energy(diagram)
             append!(energy_record,E_value)
-            # swap_arc!(diagram)
+            swap_arc!(diagram)
             # println(diagram.arc_box)
             # check_timeorder(diagram)
             # println()
@@ -215,23 +225,39 @@ begin
             #     append!(energy_record,E_value)
             # end
         end
+        # push!(order_se,order_box)
     end
 end
 
 begin
-    plot(weight_box/sum(weight_box),xlims = (0,100),title="α="*string(α))
+    plot(weight_box/sum(weight_box),xlims = (0,5),title="α="*string(α))
+    #push!(order_se,weight_box/sum(weight_box))
 end
 
 begin
-    plot(order_box/sum(order_box),xlims = (0,100),title="α="*string(α))
+    plot(order_box/sum(order_box),xlims = (0,200),title="α="*string(α))
     # plot!(range(0,100),pdf(Poisson(-diagram.dispersion/1.99),range(0,00)))
 end
 
 begin
+    # order_box=order_se[1]
+    # plot(order_box/sum(order_box),xlims = (0,1000),title="α="*string(α))
+    p = plot()
+    i=1
+    for order_box in order_se
+        p=plot!(range(0,length(order_box)-1),order_box,xlims = (0,8),title=L"α=1",xlabel=L"N",ylabel=L"Z_N",label=L"k=%$i"*string(p_record[i]),legend=:topright, dpi=300)
+        i+=1
+    end
+    display(p)
+    # savefig(p,"C://Users//wenzhaoren//Desktop//k_qua.png")
+end
+
+begin
     println(mean(energy_record[2000:end]))
-    histogram(energy_record[2000:end])#,xlims = (-5.0,-2.5))
+    p=histogram(energy_record[2000:end],normalize=:probability,xlabel=L"E_0",ylabel="Frequency", legend=false,title=L"α=1",dpi=300)#,xlims = (-5.0,-2.5))
     # println(mean(energy_record))
     # println(std(energy_record))
+    savefig(p,"C://Users//wenzhaoren//Desktop//freq.png")
 end
 
 begin

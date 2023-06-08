@@ -159,6 +159,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         # println(norm(mean_k))
         theta = acos(costheta)
         prob=coe/(exp(coe*(1-costheta))-exp(coe*(-1-costheta)))
+        # println(sinh(coe)/coe)
     end
 
     x = sin(theta)*cos(phi)
@@ -916,7 +917,7 @@ function mass_estimator(diagram::Diagram)
     m=diagram.mass
     μ=diagram.μ
     for line in line_box
-        p_squared .+= p_dispersion(line, m, μ) .*2
+        p_squared .+= line.k*(line.period[2]-period[1])#p_dispersion(line, m, μ) .*2
     end
     #return 1 / (1 - (norm(p_squared)^2)*τ/(3))
     return (norm(p_squared)^2)
@@ -1544,6 +1545,10 @@ function swap_arc!(diagram::Diagram)
     chosen_line=line_box[line_index]
 
     if chosen_line.covered
+        return false
+    end
+
+    if (chosen_line.period[2]-chosen_line.period[1])*ω*τ>-log(0.95)
         return false
     end
 
