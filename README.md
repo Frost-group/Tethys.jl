@@ -9,6 +9,23 @@ Diagrammatic Monte-Carlo (DiagMC) calculation of Fröhlich polarons. A WIP.
 
 Starting with §3 in [1] - a minimalist bare expansion for the Green function of the Frohlich polaron.
 
+## Inputs
+- Electron-phonon coupling constant, α
+- Electron momentum, *k*
+- Number of MC sweeps
+- Number of diagram updates per sweep
+
+## Potential Outputs
+Observables:
+- Ground State Energy
+- Effective polaron mass
+
+## How to run the simulation
+A basic example is given in the *examples* folder - example.jl
+
+## Packages
+Feynman's variational solution to calculate polaron mobility - https://github.com/jarvist/PolaronMobility.jl
+
 ## Bibliography
 
 1. Greitemann, J.; Pollet, L. Lecture Notes on Diagrammatic Monte Carlo for the Fröhlich Polaron. SciPost Phys. Lect. Notes 2018, 2. https://doi.org/10.21468/SciPostPhysLectNotes.2.
