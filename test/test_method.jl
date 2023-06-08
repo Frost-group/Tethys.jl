@@ -9,22 +9,38 @@ using JLD2
 using FFTW
 using Logging
 using Statistics
-
+using LaTeXStrings
 
 begin
     n_loop=200000
     num_samples=20
-    n_hist=100000
-    α=1.0#20#5#20
+    n_hist=50000
+    α=20.0#20#5#20
     μ=0#-48#-47.1#-6.3#-47#3.5#9.2
     num_mea=1; regime=Diff_more();
     p=0; max_τ=30; max_order=2000; mass=1; ω=1;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-    set_τ!(diagram,20.0)
+    set_τ!(diagram,30.0)
 end
 
 begin
-    n_loop=100
+    p_record=[]
+    record=[]
+    order_se=[]
+end
+
+begin
+    p=2
+    diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
+    append!(p_record,p)
+end
+
+
+begin
+    α=1#20#20.0
+    diagram.α=α
+    set_τ!(diagram,20.0)
+    n_loop=200000
     p_ins=0.2;p_rem=0.2;p_from_0=1;
     real_normalized=[p_ins,p_rem]
     real_normalized/=sum(real_normalized)
@@ -40,13 +56,19 @@ begin
     weight_box = zeros(max_order)
     order_box= zeros(max_order)
     energy_record=[]
+    c1=0
+    r1=0
+    c2=0
+    r2=0
+    c3=0
+    r3=0
     # n_loop=1
-    # n_hist=5000
+    # n_hist=10#5000
 end
 
 
 begin
-    Random.seed!(132432333)
+    # Random.seed!(132432333)
     num_samples=1
     dia_order=diagram.order
     m=diagram.mass
@@ -58,29 +80,64 @@ begin
     println("begin")
     for j in 1:n_loop
         println("loop.number:",j)
+        order_box= zeros(max_order)
         for i in 1:n_hist
             q=rand()
             # if !result
             #     swap_arc!(diagram)
             # end
             if dia_order == 0
+                c1+=1
                 diagram.p_ins=fake_normalized[1]
                 result=insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
                 diagram.p_ins=real_normalized[1]
+                if result
+                    r1+=1
+                end
             elseif  dia_order == 1
                 if q<real_cumsum[1]
+                    c1+=1
                     result=insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
+                    if result
+                        r1+=1
+                    end
                 else
+                    c2+=1
                     diagram.p_ins=fake_normalized[1]
                     result=remove_arc!(diagram,dia_order,m,μ,ω,α_squared)
                     diagram.p_ins=real_normalized[1]
+                    if result
+                        r2+=1
+                    end
                     #add = true
                 end
             else
                 if q<real_cumsum[1]
+                    c1+=1
                     result=insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
+                    if result
+                        r1+=1
+                    end
+
+                    # dia_order=diagram.order
+                    # c1+=1
+                    # result=insert_arc!(diagram,dia_order,m,μ,ω,α_squared)
+                    # if result
+                    #     r1+=1
+                    # end
                 else
+                    c2+=1
                     result=remove_arc!(diagram,dia_order,m,μ,ω,α_squared)
+                    if result
+                        r2+=1
+                    end
+
+                    # dia_order=diagram.order
+                    # c2+=1
+                    # result=remove_arc!(diagram,dia_order,m,μ,ω,α_squared)
+                    # if result
+                    #     r2+=1
+                    # end
                     #add = true
                 end
             end
@@ -88,10 +145,15 @@ begin
             # check_k(diagram)
             # println()
             dia_order=diagram.order
-            resample_arc!(diagram,dia_order,m,μ,ω,α_squared)
+            # update_arcp!(diagram,dia_order,m,μ)
+            # c3+=1
+            # result=resample_arc!(diagram,dia_order,m,μ,ω,α_squared)
+            # if result
+            #     r3+=1
+            # end
             E_value=energy(diagram)
             append!(energy_record,E_value)
-            # swap_arc!(diagram)
+            swap_arc!(diagram)
             # println(diagram.arc_box)
             # check_timeorder(diagram)
             # println()
@@ -121,7 +183,10 @@ begin
             # println(diagram.end_arc_box)
             # println()
             # check_timeorder(diagram)
-            
+            # println("dis_t1")
+            # println(diagram.dispersion)
+            # println("dis_t2")
+            # println(total_dis_check(diagram))
             # if !result
             #     swap_arc!(diagram)
             # end
@@ -160,23 +225,43 @@ begin
             #     append!(energy_record,E_value)
             # end
         end
+        # push!(order_se,order_box)
     end
 end
 
 begin
-    plot(weight_box/sum(weight_box),xlims = (0,10),title="α="*string(α))
+    plot(weight_box/sum(weight_box),xlims = (0,5),title="α="*string(α))
+    #push!(order_se,weight_box/sum(weight_box))
 end
 
 begin
-    plot(order_box/sum(order_box),xlims = (0,100),title="α="*string(α))
+    plot(order_box/sum(order_box),xlims = (0,200),title="α="*string(α))
     # plot!(range(0,100),pdf(Poisson(-diagram.dispersion/1.99),range(0,00)))
 end
 
 begin
+    # order_box=order_se[1]
+    # plot(order_box/sum(order_box),xlims = (0,1000),title="α="*string(α))
+    p = plot()
+    i=1
+    for order_box in order_se
+        p=plot!(range(0,length(order_box)-1),order_box,xlims = (0,8),title=L"α=1",xlabel=L"N",ylabel=L"Z_N",label=L"k=%$i"*string(p_record[i]),legend=:topright, dpi=300)
+        i+=1
+    end
+    display(p)
+    # savefig(p,"C://Users//wenzhaoren//Desktop//k_qua.png")
+end
+
+begin
     println(mean(energy_record[2000:end]))
-    histogram(energy_record[2000:end])#,xlims = (-5.0,-2.5))
+    p=histogram(energy_record[2000:end],normalize=:probability,xlabel=L"E_0",ylabel="Frequency", legend=false,title=L"α=1",dpi=300)#,xlims = (-5.0,-2.5))
     # println(mean(energy_record))
     # println(std(energy_record))
+    savefig(p,"C://Users//wenzhaoren//Desktop//freq.png")
+end
+
+begin
+    push!(record,[α,mean(energy_record[2000:end])])
 end
 
 begin
@@ -190,6 +275,15 @@ begin
         else
             println(false)
         end
+    end
+end
+
+begin
+    for arc in diagram.arc_box
+        println(norm(arc.q))
+    end
+    for arc in diagram.end_arc_box
+        println(norm(arc.q))
     end
 end
 
