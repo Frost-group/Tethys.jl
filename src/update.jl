@@ -2,7 +2,15 @@ include("Diagram.jl")
 using Base.Threads
 using StructArrays
 using SpecialFunctions
+
 function τ_update!(diagram::Diagram)
+
+    """
+    τ_update!(diagram::Diagram)
+
+    This function is not in use.
+    Extend the length of the 0th order Diagram object according to exponential distribution.
+    """
 
     if diagram.order != 0
         return false
@@ -26,6 +34,13 @@ end
 
 function p_update!(diagram::Diagram)
 
+    """
+    p_update!(diagram::Diagram)
+
+    This function is not in use.
+    Sample the momentum along x-axis of the 0th order Diagram object according to Gaussian distribution.
+    """
+
     if diagram.order != 0
         return 
     end
@@ -47,64 +62,60 @@ end
 
 function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int64,α_squared::Float64)
 
-    τ=diagram.τ
-    cross_over=false
+    """
+    insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int64,α_squared::Float64)
 
+    Attempting to insert an Arc object into the Diagram object.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be modified.
+    - `order::Int64`: is the number of Arc objects presented in the Diagram.
+    - `m::Int64`: is the mass of the electron(assumed to be 1).
+    - `μ::Float64`: is the energy offset for the Green's function(not in use).
+    - `ω::Int64`: is the phonon frequency(assumed to be 1).
+    - `α_squared::Float64`: is 2pi*sqrt(2) of coupling strength.
+    """
+
+    τ=diagram.τ
+    cross_over=false # defines whether if the inserted Arc object is crossing the end of the Diagram
+
+    # order checking
     if order+1>diagram.max_order
         return false
     end
 
+    # uniform sampling for the line_in
     line_box=diagram.line_box
-    index_in=rand(1:length(line_box))
+    index_in=rand(1:length(line_box)) # samples the line index attached to the left of the left vertex of the Arc
     line=line_box[index_in]
-    # τ_1=rand(Uniform(0,1))
-    # i=1
-    # while τ_1>line_box[i].period[2]
-    #     i+=1
-    # end
-    # index_in=i
-    # line=line_box[index_in]
 
     τ_L=deepcopy(line.period[1])*τ
     τ_R=deepcopy(line.period[2])*τ
     k_in=deepcopy(line.k)
-    # τ_1*=τ
-    τ_1=rand(Uniform(τ_L,τ_R))
-    τ_2=τ_1-log(rand())/ω
-    #τ_2=τ_1+rand(Uniform(0,τ))
+    τ_1=rand(Uniform(τ_L,τ_R)) # left vertex sampling (uniform distribution)
+    τ_2=τ_1-log(rand())/ω # right vertex sampling (exponential distribution)
 
     arc_T=τ_2-τ_1
 
+    # Arc length check
     if arc_T > τ
         return false
     end
 
     line.period[1]=τ_1/τ
     arc_T=τ_2-τ_1
-    #q=MVector{3}(rand(Normal(0,sqrt(m/arc_T)),3))
-    phi = rand(Uniform(0,pi*2))
-    # costheta = rand(Uniform(-1,1))
-    # theta = acos(costheta)
-    # x = sin(theta)*cos(phi)
-    # y = sin(theta)*sin(phi)
-    # z = cos(theta)
-    q = abs(rand(Normal(0,sqrt(m/arc_T))))#.*[x,y,z]
+    phi = rand(Uniform(0,pi*2)) # azimuth angle sampling for phonon momentum
+    q = abs(rand(Normal(0,sqrt(m/arc_T)))) # phonon momentum magnitude sampling
 
-    #ave = [0.0, 0.0, 0.0]
-    #cov = [m/arc_T 0 0; 0 m/arc_T 0; 0 0 m/arc_T]
-    #d = MvNormal(ave, cov)
-    #q = rand(d)
-
-    w_x=1.0
-    w_y=1.0
     total_dis=0.0
-    τ_R_2=0.0
-    index_out=0
-    k_out=0
-    mean_k=0
+    τ_R_2=0.0 # right vertex for the line_out attached to the Arc
+    index_out=0 # line attached to the right of the right vertex
+    k_out=0 # momentum for the line_out
+    mean_k=0 # mean momentum of the Lines covered by the Arc
 
+    # find out the region covered by the Arc
     if τ_2<τ
-        #not set covered yet
+        # for the case not cross_over
         for i in index_in:2order+1
             line_tem=line_box[i]
             if line_tem.period[2]<τ_2/τ
@@ -123,8 +134,10 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
         end
     else
+        # for the case cross_over
         cross_over=true
-        τ_2=τ_2-τ
+        τ_2=τ_2-τ # modify the right vertex time
+
         for i in index_in:2order+1
             line_tem=line_box[i]
             k=line_tem.k
@@ -154,35 +167,32 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         end
     end
 
-    
+    # altitude angle sampling
     if norm(mean_k)<=1e-10
+        # condition set for too small mean_k to avoid the error
         costheta = rand(Uniform(-1,1))
         theta = acos(costheta)
         prob=1.0/2.
     else
         coe=q*norm(mean_k)*τ/m
         costheta = 1+log(1-rand()*(1-exp(-2coe)))/coe
-        # println(norm(mean_k))
         theta = acos(costheta)
         prob=coe/(exp(coe*(1-costheta))-exp(coe*(-1-costheta)))
-        # println(sinh(coe)/coe)
     end
 
+    # transform  direction vector from spherical to Cartesian
     x = sin(theta)*cos(phi)
     y = sin(theta)*sin(phi)
     z = cos(theta)
     direct=[x,y,z]
 
     if norm(mean_k) !=0 
-        direct=rotate(mean_k)*direct
-        # println(mean_k/norm(mean_k))
-        # println(rotate(mean_k)*[0,0,1])
+        direct=rotate(mean_k)*direct # rotate to correct direction
     end
-    
-    # println(dot(mean_k,direct)/norm(mean_k))
-    # println(cos(theta))
-    q=q*direct
 
+    q=q*direct # final momentum
+
+    # start to record the index_in & index out for Arc(after Arc is added) and the dispersion change
     if !cross_over
         #not set covered yet
         for i in index_in:2order+1
@@ -236,22 +246,16 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
         index_in=index_in+1
     end
 
-    new_arc=Arc(q,[τ_1,τ_2]/τ,ω,index_in,index_out)
+
+    new_arc=Arc(q,[τ_1,τ_2]/τ,ω,index_in,index_out) # Arc object to be inserted
 
     p_x_y=diagram.p_ins*ω/(1-exp(-ω*(τ)))/(2order+1)/(τ_R-τ_L)
-    p_x_y*=2/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5*prob#*1.0/norm(q)^2
+    p_x_y*=2/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5*prob
     p_y_x=diagram.p_rem/(order+1)
-    r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3)#*norm(q)^2
-    # coef_old=-diagram.dispersion/τ
-    # coef_new=-(diagram.dispersion-total_dis-arc_T*ω)/τ
-    # r*=1/(2order+2)/(2order+1)*(coef_new/coef_old)^(2order+1)*coef_new^2
-
-    #p_x_y=diagram.p_ins/(2order+1)/(τ_R-τ_L)
-    #p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
-    #p_y_x=diagram.p_rem/(order+1)
-    #r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3*norm(q)^2)
+    r=α_squared*p_y_x/(exp(total_dis)*p_x_y*(2*pi)^3) # acceptance ratio
 
     if r<rand()
+        # return back to original diagram
         if !cross_over
             line_box[index_in].period[1]=τ_L/τ
             line_box[index_out-2].period[2]=τ_R_2/τ
@@ -292,10 +296,13 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
         return false
     else
+        # Arc insertation is accepted. Update information in diagram
+
         diagram.order+=1
         diagram.dispersion-=total_dis
         diagram.dispersion-=arc_T*ω 
 
+        # check whether if the Arc covers a single line or not (not breaking by another Arc)
         if index_out-index_in==2
             line_box[index_in].covered=true
         else
@@ -308,6 +315,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
         end
 
+        # update the line_box in diagram (new Lines due to Arc insert)
         if !cross_over
             line_tem=Line(k_in,[τ_L,τ_1]/τ, index_in, false)
             insert!(line_box, index_in, line_tem)
@@ -328,6 +336,7 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
         end
 
+        # diagram sign_box update
         sign_box=diagram.sign_box
         if index_out-index_in==2
             sign_to_add=[[copy(sign_box[index_in][1]),-1],[-1,1],[1,copy(sign_box[index_in][2])]]
@@ -372,14 +381,9 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
         end
 
-        # for i in 1:length(line_box)
-        #     line_box[i].index=i
-        #     total_dispersion+=dispersion(line_box[i], m, μ)
-        # end
-
+        # index_in & index_out update for Arcs in arc_box
         if !cross_over
             for arc in diagram.arc_box
-                # total_dispersion+=arc_dispersion(arc,ω)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_out<=index_in
@@ -401,7 +405,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
 
             for arc in diagram.end_arc_box
-                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_in<index_in
@@ -423,7 +426,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
         else
             for arc in diagram.arc_box
-                # total_dispersion+=arc_dispersion(arc,ω)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_out<=index_out-1
@@ -445,7 +447,6 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
 
             for arc in diagram.end_arc_box
-                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_in<index_out-1
@@ -467,19 +468,26 @@ function insert_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
         end
 
+        # add the Arc to the arc_box
         if !cross_over
             push!(diagram.arc_box,new_arc)
         else
             push!(diagram.end_arc_box,new_arc)
-            diagram.component+=1
+            diagram.component+=1 # record the crossing Arc
         end
-
-        # diagram.total_dispersion = total_dispersion
         return true
     end
 end
 
 function rotate(k)
+    """
+    rotate(k)
+
+    Return the rotation matrix to rotate z-axis to the mean-k direction
+
+    # Arguments
+    - `k::MVector{3,Float64}`: is mean_k for z-axis to map.
+    """
     e=k/norm(k)
     x=acos(e[3])
     u=[-e[2]/sin(x),e[1]/sin(x),0]
@@ -495,6 +503,21 @@ end
 
 function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int64,α_squared::Float64)
 
+    """
+    remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int64,α_squared::Float64)
+
+    Attempting to remove an Arc object from the Diagram object.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be modified.
+    - `order::Int64`: is the number of Arc objects presented in the Diagram.
+    - `m::Int64`: is the mass of the electron(assumed to be 1).
+    - `μ::Float64`: is the energy offset for the Green's function(not in use).
+    - `ω::Int64`: is the phonon frequency(assumed to be 1).
+    - `α_squared::Float64`: is 2pi*sqrt(2) of coupling strength.
+    """
+
+    # order checking
     if order-1<0
         return false
     end
@@ -505,31 +528,31 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     index=rand(1:order)
     offset_τ=0
     τ=diagram.τ
+
+    # randomly select the Arc to be removed
     if index <= arc_box_length
+        # for not crossing case
         arc=arc_box[index]
-        closed_arc = true
-        if arc.index_out-arc.index_in == 1
-            return false
-        end
-        
+        closed_arc = true 
     else
+        # for crossing case
         arc=end_arc_box[index-arc_box_length]
         closed_arc = false
         offset_τ=diagram.τ
     end
 
+    # extract the Arc parameters
     index_in=arc.index_in
     index_out=arc.index_out
     q=arc.q
-
 
     line_box=diagram.line_box
     line_in=line_box[index_in]
     line_out=line_box[index_out]
 
-
     τ_L=line_in.period[1]*τ
 
+    # work out the left vertex sampling range
     if index_out-index_in==2
         τ_R=line_out.period[2]*τ
     elseif index_out==index_in
@@ -545,9 +568,8 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     τ_2=arc.period[2]*τ
     arc_T=abs(offset_τ-abs(τ_2-τ_1))
     total_dis=0
-    w_x=1
-    w_y=exp(-ω*arc_T)*α_squared/(2*pi)^3/norm(q)^2
 
+    # to record the mean_k for phonon momentum direction sampling
     open_arc_range = [collect(1:index_out-1); collect(index_in+1:2order+1)]
     mean_k=0
     
@@ -591,26 +613,12 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
     end
 
     p_x_y=diagram.p_ins*ω/(1-exp(-ω*(τ)))/(2order-1)/(τ_R-τ_L)
-    p_x_y*=2.0/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5*prob#exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
-
-    if closed_arc
-        p_y_x=diagram.p_rem/order
-        #p_y_x=diagram.p_rem/length(diagram.arc_box)
-    else
-        p_y_x=diagram.p_rem/order
-        #p_y_x=diagram.p_rem/diagram.component
-    end
-    r=((2*pi)^3*p_x_y)/(exp(total_dis)*p_y_x*α_squared)#*norm(q)^2
-    # coef_old=-diagram.dispersion/τ
-    # coef_new=-(diagram.dispersion-total_dis+arc_T*ω)/τ
-    # r*=(2order)*(2order-1)*(coef_new/coef_old)^(2order-1)/coef_old^2
-    #p_x_y=diagram.p_ins/(2order-1)/(τ_R-τ_L)
-    #p_x_y*=exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^1.5
-
-    #p_y_x=diagram.p_rem/order
-    #r=((2*pi)^3*p_x_y*norm(q)^2)/(exp(total_dis)*p_y_x*α_squared)
+    p_x_y*=2.0/(2pi)*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5*prob
+    p_y_x=diagram.p_rem/order
+    r=((2*pi)^3*p_x_y)/(exp(total_dis)*p_y_x*α_squared) # acceptance ratio
 
     if r<rand()
+    # return back to original diagram
         if closed_arc
             for i in index_in+1:index_out-1
                 line_tem=line_box[i]
@@ -634,17 +642,21 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
         return false
     else
+        # Arc removal is accepted. Update information in diagram
+
         sign_box=diagram.sign_box
         diagram.order-=1
         diagram.dispersion-=total_dis
         diagram.dispersion+=arc_T*ω 
 
+        # Arc delete
         if closed_arc
             deleteat!(arc_box, index)
         else
             deleteat!(end_arc_box, index-arc_box_length)
         end
 
+        # update the covered property and the diagram sign box
         if closed_arc
             if index_out-index_in==2
                 line_tem=line_box[index_in+1]
@@ -662,7 +674,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
                 deleteat!(sign_box, index_in:index_in+1)
                 insert!(sign_box, index_in, sign_to_add)
 
-
                 line_tem=line_box[index_out-1]
                 line_tem.period[2]=τ_R_2/τ
                 sign_to_add=[sign_box[index_out-2][1],sign_box[index_out-1][2]]
@@ -670,6 +681,7 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
                 insert!(sign_box, index_out-2, sign_to_add)
 
             end
+            # Line object delete
             deleteat!(line_box, [index_in,index_out])
 
         else
@@ -697,19 +709,18 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
                 insert!(sign_box, index_out-1, sign_to_add)
 
             end
+            # Line object delete
             deleteat!(line_box, [index_out-1, index_in+1])
         end
 
-        # total_dispersion = 0.0
-
+        # set the line index to correct sequence (for debug)
         for i in 1:length(line_box)
             line_box[i].index=i
-            # total_dispersion+=dispersion(line_box[i], m, μ)
         end
 
+        # index_in & index_out update for Arcs in arc_box
         if closed_arc
             for arc in diagram.arc_box
-                # total_dispersion+=arc_dispersion(arc,ω)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_out<=index_in
@@ -740,7 +751,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
 
             for arc in diagram.end_arc_box
-                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_in < index_in
@@ -763,7 +773,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
 
         else
             for arc in diagram.arc_box
-                # total_dispersion+=arc_dispersion(arc,ω)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_out < index_out
@@ -794,7 +803,6 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
             end
             
             for arc in diagram.end_arc_box
-                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_in < index_out
@@ -815,16 +823,26 @@ function remove_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int6
                 end
             end
 
-            diagram.component-=1
+            diagram.component-=1 # record the crossing Arc
         end
-
-        # diagram.total_dispersion = total_dispersion
         return true
     end
 end
 
 function arc_judge(arc::Arc,sign::Int64,bound::Bool,index::Int64)
-    # bound true is right, false is left
+
+    """
+    arc_judge(arc::Arc,sign::Int64,bound::Bool,index::Int64)
+    
+    Check whether if the Line object is attached to the Arc vertex or not.
+
+    # Arguments
+    - `arc::Arc`: is the Arc object to be checked.
+    - `sign::Int64`: is the parameter for interaction vertex (-1 is the left vertex & +1 is the right one).
+    - `bound::Bool`: is the parameter determining the position of the Line relative to the vertex.(bound true is right, false is left)
+    - `index::Int64`: is the Line index to be checked.
+    """
+
     if bound 
         if sign == 1
             return arc.index_out-1 == index
@@ -840,181 +858,17 @@ function arc_judge(arc::Arc,sign::Int64,bound::Bool,index::Int64)
     end
 end
 
-function swap_arc!(diagram::Diagram)
-
-    order=diagram.order
-    m=diagram.mass
-    μ=diagram.μ
-    ω=diagram.ω
-
-    if order<2
-        return false
-    end
-
-    line_box=diagram.line_box
-    line_index=rand(2:2*order)
-    chosen_line=line_box[line_index]
-
-    if chosen_line.covered
-        return false
-    end
-
-    sign=diagram.sign_box[line_index]
-    arc_box=diagram.arc_box
-    end_arc_box=diagram.end_arc_box
-    arc_box_length = length(arc_box)
-    left_check=false
-    right_check=false
-    left_open=false
-    right_open=false
-    left_index=0
-    right_index=0
-
-    for i in 1:arc_box_length
-        arc=arc_box[i]
-        if !left_check
-            if arc_judge(arc,sign[1],false,line_index)
-                left_index=i
-                left_check=true
-            end
-        end
-
-        if !right_check
-            if arc_judge(arc,sign[2],true,line_index)
-                right_index=i
-                right_check=true
-            end
-        end
-
-        if right_check && left_check
-            break
-        end
-    end
-    for i in 1:length(end_arc_box)
-        arc=end_arc_box[i]
-        if !left_check
-            if arc_judge(arc,sign[1],false,line_index)
-                left_index=i
-                left_check=true
-                left_open=true
-            end
-        end
-
-        if !right_check
-            if arc_judge(arc,sign[2],true,line_index)
-                right_index=i
-                right_check=true
-                right_open=true
-            end
-        end
-
-        if right_check && left_check
-            break
-        end
-    end
-
-    if right_open && left_open && right_index == left_index
-        return false
-    end
-
-    #if right_open || left_open
-    #    return false
-    #end
-
-    # println(right_check,left_check)
-    # println("swap_index is:",line_index)
-    if left_open
-        arc_l=end_arc_box[left_index]
-    else
-        arc_l=arc_box[left_index]
-    end
-    if right_open
-        arc_r=end_arc_box[right_index]
-    else
-        arc_r=arc_box[right_index]
-    end
-
-    q1=arc_l.q
-    q2=arc_r.q
-
-    if sign[1] == 1
-        new_arc_l=Arc(q1,[arc_l.period[1],chosen_line.period[2]],ω,arc_l.index_in,line_index+1)
-    else
-        new_arc_l=Arc(q1,[chosen_line.period[2],arc_l.period[2]],ω,line_index,arc_l.index_out)
-    end
-
-    if sign[2] == 1
-        new_arc_r=Arc(q2,[arc_r.period[1],chosen_line.period[1]],ω,arc_r.index_in,line_index)
-    else
-        new_arc_r=Arc(q2,[chosen_line.period[1],arc_r.period[2]],ω,line_index-1,arc_r.index_out)
-    end
-
-    new_line=Line(chosen_line.k-sign[1]*q1+sign[2]*q2 ,chosen_line.period, line_index,false)
-    # w_x=green_zero(chosen_line, m, μ)*phonon_propagator(arc_l)*phonon_propagator(arc_r)
-    # w_y=green_zero(new_line, m, μ)*phonon_propagator(new_arc_l)*phonon_propagator(new_arc_r)
-    total_dis=dispersion(new_line, m, μ)-dispersion(chosen_line, m, μ)
-    total_dis+=arc_dispersion(new_arc_r,ω)+arc_dispersion(new_arc_l,ω)-arc_dispersion(arc_r,ω)-arc_dispersion(arc_l,ω)
-    r=exp(total_dis*diagram.τ)
-    # println(w_y/w_x)
-    # r=ratio*(1+log(ratio)/diagram.dispersion)^(2order+1)
-
-    if ω*abs(chosen_line.period[2]-chosen_line.period[1])*diagram.τ > -log(0.98)
-        return false
-    end
-
-    if r<rand()
-        return false
-    else
-        diagram.dispersion+=total_dis*diagram.τ#log(r)
-        deleteat!(line_box, line_index)
-        insert!(line_box, line_index, new_line)
-        # diagram.total_dispersion+=dispersion(new_line, m, μ)
-        sign_box=diagram.sign_box
-        deleteat!(sign_box, line_index)
-        insert!(sign_box, line_index, [sign[2],sign[1]])
-        sign_box[line_index-1]=[sign_box[line_index-1][1],sign[2]]
-        sign_box[line_index+1]=[sign[1],sign_box[line_index+1][2]]
-
-        if left_open
-            # diagram.total_dispersion-=end_arc_dispersion(end_arc_box[left_index],ω, diagram.τ)
-            deleteat!(end_arc_box, left_index)
-            insert!(end_arc_box, left_index, new_arc_l)
-            # diagram.total_dispersion+=end_arc_dispersion(new_arc_l,ω, diagram.τ)
-        else
-            # diagram.total_dispersion-=arc_dispersion(arc_box[left_index],ω)
-            deleteat!(arc_box, left_index)
-            insert!(arc_box, left_index, new_arc_l)
-            # diagram.total_dispersion+=arc_dispersion(new_arc_l,ω)
-        end
-        if right_open
-            # diagram.total_dispersion-=end_arc_dispersion(end_arc_box[right_index],ω, diagram.τ)
-            deleteat!(end_arc_box, right_index)
-            insert!(end_arc_box, right_index, new_arc_r)
-            # diagram.total_dispersion+=end_arc_dispersion(new_arc_r,ω, diagram.τ)
-        else
-            # diagram.total_dispersion-=arc_dispersion(arc_box[right_index],ω)
-            deleteat!(arc_box, right_index)
-            insert!(arc_box, right_index, new_arc_r)
-            # diagram.total_dispersion+=arc_dispersion(new_arc_r,ω)
-        end
-
-        if new_arc_l.index_out-new_arc_l.index_in == 2
-            line_box[new_arc_l.index_in+1].covered=true
-        end
-
-        if new_arc_r.index_out-new_arc_r.index_in == 2
-            line_box[new_arc_r.index_in+1].covered=true
-        end
-        sign=diagram.sign_box[line_index]
-        #shift!(diagram,sign[1],line_index-1,right_index,!right_open,m,μ)
-        #shift!(diagram,sign[2],line_index,left_index,!left_open,m,μ)
-        #update_arcp!(diagram,order,right_index,!right_open,m,μ)
-        #update_arcp!(diagram,order,left_index,!left_open,m,μ)
-        return true
-    end
-end
-
 function extend!(diagram::Diagram)
+
+    """
+    extend!(diagram::Diagram)
+
+    This function is not in use.
+    Extend the last Line object in the diagram according to exponential distribution.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be modified.
+    """
 
     line_box=diagram.line_box
     order=diagram.order
@@ -1044,21 +898,31 @@ function extend!(diagram::Diagram)
 
 end
 
-
 function scale!(diagram::Diagram, order::Int64,m::Int64,μ::Float64,ω::Int64, samples::Int64)
+
+    """
+    scale!(diagram::Diagram, order::Int64,m::Int64,μ::Float64,ω::Int64, samples::Int64)
+
+    This function is not in use.
+    Sample the diagram length according to Gamma distribution.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be modified.
+    - `order::Int64`: is the number of Arc objects presented in the Diagram.
+    - `m::Int64`: is the mass of the electron(assumed to be 1).
+    - `μ::Float64`: is the energy offset for the Green's function(not in use).
+    - `ω::Int64`: is the phonon frequency(assumed to be 1).
+    - `samples::Int64`: is the number of times to sample the new diagram length.
+    """
 
     line_box=diagram.line_box
     arc_box=diagram.arc_box
     end_arc_box=diagram.end_arc_box
-    #line_box_length = length(line_box)
-    #arc_box_length = length(arc_box)
-    #end_arc_box_length = length(end_arc_box)
     τ=diagram.τ
     record_τ=diagram.record_τ
     total_dis=diagram.dispersion
     
     coef=-τ/total_dis
-    #println(coef)
     τ_new=rand(Gamma(2*order+1,coef),samples)
 
     if τ_new[1]>diagram.max_τ
@@ -1066,10 +930,6 @@ function scale!(diagram::Diagram, order::Int64,m::Int64,μ::Float64,ω::Int64, s
     end
 
     diagram.record_τ=τ_new
-
-    # if τ_new[1]<5.0
-    #     return false
-    # end
     
     diagram.dispersion*=τ_new[1]/τ
     diagram.τ=τ_new[1]
@@ -1079,6 +939,17 @@ function scale!(diagram::Diagram, order::Int64,m::Int64,μ::Float64,ω::Int64, s
 end
 
 function set_μ!(diagram::Diagram,new_μ::Float64)
+
+    """
+    set_μ!(diagram::Diagram,new_μ::Float64)
+
+    This function is not in use.
+    Set the new energy offset for the Diagram object.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be modified.
+    - `new_μ::Float64`: is the new energy offset to be applied.
+    """
     old_μ=copy(diagram.μ)
     total_dis=diagram.dispersion
     τ=diagram.τ
@@ -1092,6 +963,15 @@ end
 
 function set_τ!(diagram::Diagram,new_τ::Float64)
 
+    """
+    set_τ!(diagram::Diagram,new_τ::Float64)
+
+    Set the new diagram length for the Diagram object.(scaling with vertex proportion the same)
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be modified.
+    - `new_τ::Float64`: is the new length to be applied.
+    """
     τ=diagram.τ
     diagram.dispersion/=τ
     diagram.dispersion*=new_τ
@@ -1100,34 +980,53 @@ function set_τ!(diagram::Diagram,new_τ::Float64)
     return diagram
 end
 
-function set_α!(diagram::Diagram,new_α::Float64)
-
-    diagram.α=new_α
-    return diagram
-end
-
 function energy(diagram::Diagram)
+
+    """
+    energy(diagram::Diagram)
+
+    Evaluate the ground energy for the Diagram object.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be evaluated.
+    """
     total_dis=-diagram.dispersion
     τ=diagram.τ
     order=diagram.order
-    #return (total_dis-2*order+2*length(diagram.end_arc_box))/τ
     return (total_dis-2*order)/τ
 end
 
 function mass_estimator(diagram::Diagram)
+
+    """
+    mass_estimator(diagram::Diagram)
+
+    Evaluate the effective mass for the Diagram object.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be evaluated.
+    """
     line_box=diagram.line_box
-    mean_p = [0.0, 0.0, 0.0]
+    p_squared = [0.0, 0.0, 0.0]
     τ=diagram.τ
     m=diagram.mass
     μ=diagram.μ
     for line in line_box
-        mean_p .+= p_dispersion(line)
+        p_squared .+= line.k*(line.period[2]-period[1])
     end
-    #return 1 / (1 - (norm(p_squared)^2)*τ/(3))
-    return (norm(mean_p)^2)
+    return (norm(p_squared)^2)
 end
 
 function total_dis_check(diagram::Diagram)
+
+    """
+    total_dis_check(diagram::Diagram)
+
+    Check the recorded total dispersion in update matches with the one calculated directly. (debug)
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be evaluated.
+    """
 
     m=diagram.mass
     ω=diagram.ω
@@ -1152,7 +1051,21 @@ function total_dis_check(diagram::Diagram)
 end
 
 function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int64,α_squared::Float64)
+    
+    """
+    resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::Int64,α_squared::Float64)
 
+    This function is not in use.
+    Resample one inserted Arc parameters (except the left vertex) according to the same steps in insert_arc! update.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be modified.
+    - `order::Int64`: is the number of Arc objects presented in the Diagram.
+    - `m::Int64`: is the mass of the electron(assumed to be 1).
+    - `μ::Float64`: is the energy offset for the Green's function(not in use).
+    - `ω::Int64`: is the phonon frequency(assumed to be 1).
+    - `α_squared::Float64`: is 2pi*sqrt(2) of couopling strength.
+    """
     if order-1<0
         return false
     end
@@ -1161,7 +1074,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
     end_arc_box = diagram.end_arc_box
     arc_box_length = length(arc_box)
     index=rand(1:order)
-    # println(index)
     offset_τ=0
     τ=diagram.τ
 
@@ -1177,7 +1089,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
 
     index_in=arc.index_in
     index_out_r=arc.index_out
-    # println(index_out_r)
     q=arc.q
 
 
@@ -1232,7 +1143,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
         prob_r=coe/(exp(coe*(1-costheta))-exp(coe*(-1-costheta)))
     end
 
-    #insert
     cross_over=false
     phi = rand(Uniform(0,pi*2))
     q_in = abs(rand(Normal(0,sqrt(m/arc_T_in))))
@@ -1298,7 +1208,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
     else
         coe=q_in*norm(mean_k_i)*τ/m
         costheta = 1+log(1-rand()*(1-exp(-2coe)))/coe
-        # println(norm(mean_k))
         theta = acos(costheta)
         prob_i=coe/(exp(coe*(1-costheta))-exp(coe*(-1-costheta)))
     end
@@ -1403,29 +1312,19 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
         return false
 
     else
-        # println("closed_arc")
-        # println(closed_arc)
-        # println("cross_over")
-        # println(cross_over)
         sign_box=diagram.sign_box
         diagram.dispersion+=total_dis
         diagram.dispersion+=(arc_T-arc_T_in)*ω 
-        # arc_box=diagram.arc_box
-        # end_arc_box = diagram.end_arc_box
         if closed_arc
             deleteat!(arc_box, index)
         else
             deleteat!(end_arc_box, index-arc_box_length)
         end
-        # println(diagram.arc_box)
-        # println(q_in)
 
         if index_out_r == index_out_in
-            # println("s1")
             line_tem=line_box[index_out_r]
             line_tem.period[1]=τ_2_in/τ
         elseif index_out_r == index_out_in-1
-            # println("s2")
             line_tem_1=line_box[index_out_r-1]
             line_tem_2=line_box[index_out_r]
             τ_c=line_tem_2.period[2]
@@ -1441,7 +1340,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
             line_tem_1.period[2]=τ_c
 
             line_tem_3=Line(k_out,[τ_2_in/τ,τ_R_2], index_out_in, false)
-            # insert!(line_box, index_out_in, line_tem_3)
 
             deleteat!(line_box, index_out_r)
             sign_to_add=[sign_box[index_out_r-1][1],sign_box[index_out_r][2]]
@@ -1449,7 +1347,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
             insert!(sign_box, index_out_r-1, sign_to_add)
             if closed_arc
                 if index_out_in>index_out_r
-                    # println("s3")
                     index_out_in-=1
                     new_arc.index_out=index_out_in
                     insert!(line_box, index_out_in, line_tem_3)
@@ -1460,7 +1357,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
                         insert!(sign_box, index_out_in-1, sign_to_add[3-i])
                     end
                 elseif index_out_in<index_out_r && !cross_over
-                    # println("s4")
                     insert!(line_box, index_out_in, line_tem_3)
                     sign_to_add=[[sign_box[index_out_in-1][1],1],[1,sign_box[index_out_in-1][2]]]
                     deleteat!(sign_box,index_out_in-1)
@@ -1502,7 +1398,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
                         insert!(sign_box, index_out_in-1, sign_to_add[3-i])
                     end
                 else
-                    # new_arc.index_in+=1
                     insert!(line_box, index_out_in, line_tem_3)
                     sign_to_add=[[sign_box[index_out_in-1][1],1],[1,sign_box[index_out_in-1][2]]]
                     deleteat!(sign_box,index_out_in-1)
@@ -1513,14 +1408,12 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
                 end
             end
         end
-        #delete
 
         index_in=arc.index_in
         index_out=arc.index_out
 
         if closed_arc
             for arc in diagram.arc_box
-                # total_dispersion+=arc_dispersion(arc,ω)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_out<=index_in
@@ -1551,7 +1444,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
             end
 
             for arc in diagram.end_arc_box
-                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_in < index_in
@@ -1574,7 +1466,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
 
         else
             for arc in diagram.arc_box
-                # total_dispersion+=arc_dispersion(arc,ω)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_out < index_out
@@ -1605,7 +1496,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
             end
             
             for arc in diagram.end_arc_box
-                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_in < index_out
@@ -1633,7 +1523,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
         index_out=new_arc.index_out
         if !cross_over
             for arc in diagram.arc_box
-                # total_dispersion+=arc_dispersion(arc,ω)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_out<=index_in
@@ -1655,7 +1544,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
             end
 
             for arc in diagram.end_arc_box
-                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_in<index_in
@@ -1677,7 +1565,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
             end
         else
             for arc in diagram.arc_box
-                # total_dispersion+=arc_dispersion(arc,ω)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_out<=index_out-1
@@ -1699,7 +1586,6 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
             end
 
             for arc in diagram.end_arc_box
-                # total_dispersion+=end_arc_dispersion(arc,ω, τ)
                 arc_index_in = arc.index_in
                 arc_index_out = arc.index_out
                 if arc_index_in<index_out-1
@@ -1720,7 +1606,7 @@ function resample_arc!(diagram::Diagram,order::Int64,m::Int64,μ::Float64,ω::In
                 end
             end
         end
-        # println("insert")
+
         if !cross_over
             push!(diagram.arc_box,new_arc)
         else
@@ -1734,24 +1620,36 @@ end
 
 function swap_arc!(diagram::Diagram)
 
+    """
+    swap_arc!(diagram::Diagram)
+
+    Attempting to swap two nearest interaction vertexes of two Arcs in the Diagram object.
+
+    # Arguments
+    - `diagram::Diagram`: is the Diagram object to be modified.
+    """
     order=diagram.order
     m=diagram.mass
     μ=diagram.μ
     ω=diagram.ω
     τ=diagram.τ
 
+    # order checking
     if order<2
         return false
     end
 
+    # randomly to choose Line to perform swap
     line_box=diagram.line_box
     line_index=rand(2:2*order)
     chosen_line=line_box[line_index]
 
+    # covered property check
     if chosen_line.covered
         return false
     end
 
+    # line length check to avoid abias in insert & remove (0.95 can be replaced with probability high enough e.g. 0.9-1)
     if (chosen_line.period[2]-chosen_line.period[1])*ω*τ>-log(0.95)
         return false
     end
@@ -1767,6 +1665,7 @@ function swap_arc!(diagram::Diagram)
     left_index=0
     right_index=0
 
+    # find the Arc vertexes attached to the selected Line
     for i in 1:arc_box_length
         arc=arc_box[i]
         if !left_check
@@ -1809,13 +1708,14 @@ function swap_arc!(diagram::Diagram)
             break
         end
     end
-    # println("he")
+
+    # debug to ensure covered property is set correctly
     if right_open && left_open && right_index == left_index
         println("overlap")
         return false
     end
-    # println(right_check,left_check)
-    # println("swap_index is:",line_index)
+
+    # Arcs to be swapped
     if left_open
         arc_l=end_arc_box[left_index]
     else
@@ -1830,6 +1730,7 @@ function swap_arc!(diagram::Diagram)
     q1=arc_l.q
     q2=arc_r.q
 
+    # new Arcs to be replaced after SWAP
     if sign[1] == 1
         new_arc_l=Arc(q1,[arc_l.period[1],chosen_line.period[2]],ω,arc_l.index_in,line_index+1)
     else
@@ -1843,59 +1744,45 @@ function swap_arc!(diagram::Diagram)
     end
 
     new_line=Line(chosen_line.k-sign[1]*q1+sign[2]*q2 ,chosen_line.period, line_index,false)
-    # w_x=green_zero(chosen_line, m, μ)*phonon_propagator(arc_l)*phonon_propagator(arc_r)
-    # w_y=green_zero(new_line, m, μ)*phonon_propagator(new_arc_l)*phonon_propagator(new_arc_r)
-    # total_dis=dispersion(new_line, m, μ)-dispersion(chosen_line, m, μ)
-    # total_dis+=(arc_dispersion(new_arc_r,ω)-arc_dispersion(arc_r,ω))+(arc_dispersion(new_arc_l,ω)-arc_dispersion(arc_l,ω))#(-1)^right_open*#(-1)^left_open*
+
     dis=(norm(chosen_line.k-sign[1]*q1+sign[2]*q2)^2-norm(chosen_line.k)^2)/(2m)
     dis+=(sign[1]-sign[2])*ω
     dis*=-(chosen_line.period[2]-chosen_line.period[1])*τ
-    # p_x_y=insert_prob(new_arc_r,right_open,ω,m,τ)*insert_prob(new_arc_l,left_open,ω,m,τ)
-    # p_y_x=insert_prob(arc_r,right_open,ω,m,τ)*insert_prob(arc_l,left_open,ω,m,τ)
-    r=exp(dis)#*p_x_y/p_y_x#total_dis*diagram.τ
-    # println(r)
-    # p_x_y=ω*exp(-ω*(arc_T))*exp(-norm(q)^2/(2m)*arc_T)/(2pi*m/arc_T)^0.5#/norm(q)^2*1.0/(2pi)
-
-    # println(w_y/w_x)
-    # r=ratio*(1+log(ratio)/diagram.dispersion)^(2order+1)
+    r=exp(dis) # acceptance ratio
 
     if r<rand()
+        # return back to original diagram
         return false
     else
-        # println(total_dis*diagram.τ)
-        diagram.dispersion+=dis#total_dis*diagram.τ#log(r)
+        # Arc SWAP is accepted. Update information in diagram
+        diagram.dispersion+=dis
+
+        # update line_box and sign_box
         deleteat!(line_box, line_index)
         insert!(line_box, line_index, new_line)
-        # diagram.total_dispersion+=dispersion(new_line, m, μ)
         sign_box=diagram.sign_box
         deleteat!(sign_box, line_index)
         insert!(sign_box, line_index, [sign[2],sign[1]])
         sign_box[line_index-1]=[sign_box[line_index-1][1],sign[2]]
         sign_box[line_index+1]=[sign[1],sign_box[line_index+1][2]]
 
+        # arc_box update
         if left_open
-            # diagram.total_dispersion-=end_arc_dispersion(end_arc_box[left_index],ω, diagram.τ)
             deleteat!(end_arc_box, left_index)
             insert!(end_arc_box, left_index, new_arc_l)
-            # diagram.total_dispersion+=end_arc_dispersion(new_arc_l,ω, diagram.τ)
         else
-            # diagram.total_dispersion-=arc_dispersion(arc_box[left_index],ω)
             deleteat!(arc_box, left_index)
             insert!(arc_box, left_index, new_arc_l)
-            # diagram.total_dispersion+=arc_dispersion(new_arc_l,ω)
         end
         if right_open
-            # diagram.total_dispersion-=end_arc_dispersion(end_arc_box[right_index],ω, diagram.τ)
             deleteat!(end_arc_box, right_index)
             insert!(end_arc_box, right_index, new_arc_r)
-            # diagram.total_dispersion+=end_arc_dispersion(new_arc_r,ω, diagram.τ)
         else
-            # diagram.total_dispersion-=arc_dispersion(arc_box[right_index],ω)
             deleteat!(arc_box, right_index)
             insert!(arc_box, right_index, new_arc_r)
-            # diagram.total_dispersion+=arc_dispersion(new_arc_r,ω)
         end
 
+        # covered property update
         if new_arc_l.index_out-new_arc_l.index_in == 2
             line_box[new_arc_l.index_in+1].covered=true
         end
@@ -1904,14 +1791,6 @@ function swap_arc!(diagram::Diagram)
             line_box[new_arc_r.index_in+1].covered=true
         end
         sign=diagram.sign_box[line_index]
-
-        # shift_3!(diagram,sign[1],line_index-1,right_index,!right_open,m,μ,order)
-        # shift_3!(diagram,sign[2],line_index,left_index,!left_open,m,μ,order)
-        # update_arcp!(diagram,order,right_index,!right_open,m,μ)
-        # update_arcp!(diagram,order,left_index,!left_open,m,μ)#update_arcp_2!
-        # shift!(diagram,sign[1],line_index-1,right_index,!right_open,m,μ)
-        # shift!(diagram,sign[2],line_index,left_index,!left_open,m,μ)
-
 
         return true
     end

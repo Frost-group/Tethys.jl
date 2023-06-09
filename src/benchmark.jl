@@ -1,7 +1,7 @@
 include("Diagram.jl")
 include("update.jl")
-include("measure.jl")
-include("zero_update.jl")
+#include("measure.jl")
+#include("zero_update.jl")
 import Tethys
 using Random
 using Logging

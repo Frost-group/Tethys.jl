@@ -1,6 +1,6 @@
 include("Diagram.jl")
 include("update.jl")
-include("zero_update.jl")
+#include("zero_update.jl")
 include("autocorrelation.jl")
 using Random
 using LsqFit
