@@ -4,21 +4,29 @@ include("measure.jl")
 using Random
 using LsqFit
 using JLD2
+using Logging
+using BenchmarkTools
 
 
 begin
-    num_mea=1; regime=Diff_more(); regime_2=Diff_2()
-    p=0; max_τ=30; max_order=500; mass=1; μ=-2.2; ω=1; α=2
+    n_loop=100
+    num_mea=1; regime=Diff_more();
+    p=0; max_τ=30; max_order=1000; mass=1; ω=1;
+    α=1
+    μ=-1.1
+    n_hist = 100000
+    directory = "D://data"
+    store_data = false
 end
 
 begin
-    hist=Hist_Record(300,max_τ,500)
-    diagram=Diagram(0, max_τ, max_order, mass, μ, ω, α)
+    hist=Hist_Record(300,max_τ,max_order)
+    diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
 end
 
 begin
-    green_record,green_func,variance=hist_measure_4!(diagram,hist,10000)#
-    println("end")
+    diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,directory,n_loop,store_data,n_hist)
+    @info "End of sampling"
 end
 
 begin

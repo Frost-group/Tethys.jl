@@ -4,28 +4,52 @@ using DataFrames
 using JLD2,FileIO
 using LsqFit
 using Logging
+using PolaronMobility
 
-function slicematrix(A::AbstractMatrix)
-    return [A[i, :] for i in 1:size(A,1)]
+
+"""
+    VMC_energy(α)
+
+Returns the zero-temperature ground-state energy of the polaron for a material with multiple phonon branches.
+From the PolaronMobility Julia package which uses the Feynman's variational method. 
+
+See: https://github.com/jarvist/PolaronMobility.jl
+
+"""
+function VMC_energy(α)
+    v,w = feynmanvw(α)
+    return F(v, w, α)
 end
 
+
+
+function slicematrix(A::AbstractMatrix)
+    return [A[i, :] for i in 1:size(A, 1)]
+end
+
+
+"""
+    get_data(directory, α, k)
+
+Loads metadata generated from DiagMC simulation
+"""
 function get_data(directory, α, k)
 
-    address=joinpath(directory,"α="*string(round(α, digits=3)),
-            "k="*string(round(k, digits=3)))
+    address=joinpath(directory,"α="*string(round(α, digits = 3)),
+            "k="*string(round(k, digits = 3)))
 
     diagram = []
     hist = []
     green_record = []
     zero_record = []
-    normalized_data =[]
+    normalized_data = []
     bin_variance = []
 
     try
-        address = readdir(address; join=true)[1]  
-        address = readdir(address; join=true)[1]
-        df_total = DataFrame(CSV.File(joinpath(address,"total_green.csv"), header=0))
-        df_zero = DataFrame(CSV.File(joinpath(address,"zero_green.csv"), header=0))
+        address = readdir(address; join = true)[1]  
+        address = readdir(address; join = true)[1]
+        df_total = DataFrame(CSV.File(joinpath(address, "total_green.csv"), header = 0))
+        df_zero = DataFrame(CSV.File(joinpath(address, "zero_green.csv"), header = 0))
     
         diagram=load(joinpath(address,"diagram.jld2"), "diagram_a")
         hist=load(joinpath(address,"hist.jld2"), "hist_a")
@@ -37,7 +61,7 @@ function get_data(directory, α, k)
         n_loop = length(green_record)
     
         normalized_data=hist.normalized_data
-        bin_variance=jackknife(green_record,zero_record,n_loop,diagram,bin_width,0.1)
+        bin_variance=jackknife(green_record, zero_record, n_loop, diagram, bin_width, 0.1)
 
     catch
         @info "Directory does not exist for "*address
@@ -49,7 +73,7 @@ function get_data(directory, α, k)
 end
 
 begin
-    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("F://data",1.2,0.0 )
+    diagram, hist, green_record, zero_record, normalized_data, bin_variance = get_data("E://data",4.1,0.0 )
 end
 
 
@@ -96,6 +120,7 @@ end
 begin
     plot(scanned_α,energy_record,yerr=E_error_record,xlabel="α",ylabel="Energy",label="DiagMC")
     plot!(scanned_α,-scanned_α.-1.26*(scanned_α./10).^2,xlabel="α",ylabel="Energy",label="Pertub")
+    plot!(scanned_α,VMC_energy.(scanned_α),xlabel="α",ylabel="Energy",label="VMC")
 end
 
 begin

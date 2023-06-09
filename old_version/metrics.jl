@@ -5,6 +5,7 @@ include("measure.jl")
 using Profile
 using Logging
 using BenchmarkTools
+using LsqFit
 
 begin
     p=0; max_τ=30; max_order=500; mass=1; ω=1;
@@ -179,9 +180,9 @@ begin
 end
 
 begin
-    n_loop=200
+    n_loop=10000
     num_mea=1; regime=Diff_more();
-    p=0; max_τ=30; max_order=500; mass=1; ω=1;
+    p=2; max_τ=30; max_order=500; mass=1; ω=1;
 
 
     linear(t, p) = p[1].-p[2].*t
@@ -189,9 +190,9 @@ begin
     min_time=Int(div(5,bin_width,RoundUp))
     max_time=Int(div(12,bin_width,RoundUp))
 
-    α=0.1
-    μ=1
-    directory = "F://data"
+    α=1
+    μ=-0.5
+    directory = "D://data"
     store_data = false
     hist=Hist_Record(300,max_τ,max_order)
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
@@ -216,4 +217,12 @@ begin
     println("perturb:",-α-1.26*(α/10)^2)
 end
 
+begin
+    time_points=hist.time_points[min_time:max_time]
+
+    statis=sum(green_func[i,:] for i in 1:1)
+    y=log.(statis)[min_time:max_time]
+    plot(time_points,y)
+
+end
 
