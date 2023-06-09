@@ -1,47 +1,40 @@
-include("Diagram.jl")
-include("update.jl")
-include("measure.jl")
 using FFTW
 using Logging
 using Statistics
 
-begin
-    n_loop=1000
-    n_hist = 10000
-    cutoff = floor(Int, round(n_loop/10))
-    α=1.5
-    μ=-1.7
-    num_mea=1; regime=Diff_more();
-    p=0; max_τ=30; max_order=500; mass=1; ω=1;
+"""
+  auto_window(taus, c)
 
-    store_data = false
+Automated window scheme proposed by Sokal, where c=5.
+See A. Sokal, Monte Carlo Methods in Statistical Mechanics: Foundations and New Algorithms. 1997.
 
-    bin_width=max_τ/300
-    min_time=Int(div(5,bin_width,RoundUp))
-    max_time=Int(div(15,bin_width,RoundUp))
+"""
+function auto_window(taus, c::Float64)
+    m = collect(1:length(taus)) .< c * taus
+    if sum(m) > 0
+        return argmin(m)
+    end
+    return length(taus)
+end
 
-    hist=Hist_Record(300,max_τ,max_order)
-    diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
-    diagram,hist,green_record,zero_record,green_func,variance=hist_measure!(diagram,hist,"D://data",n_loop,store_data,n_hist)
-    @info "End of loop"
+"""
+  autocorrelation(x, burnin)
 
-    time_points=hist.time_points[min_time:max_time]
+Calculates the autocorrelation of the 1D estimator x, given the burnin samples.
+Computed using Fast Fourier Transforms (FFTs).
 
-    statis=sum(green_func[i,:] for i in 1:max_order+1)
-    y=log.(statis)[min_time:max_time]
-    
-    green_record_renorm = [green_record[i]./sum(green_record[i]) for i in 1:n_loop]
+"""
+function autocorrelation(x, burnin::Int64)
 
-    F = fft(getindex.(green_record_renorm[cutoff:end],1))
+    n = Int64(log2(nextpow(2,length(x[burnin:end]))))
+
+    F = fft(x[burnin:end].-mean(x[burnin:end]))
     acf = real.(ifft(F.*conj.(F)))
-    acf = acf/(4*length(green_record_renorm[cutoff:end]))
+    acf = acf/(4*n)
     acf = acf/acf[1]
-    #freqs = fftshift(fftfreq(length(t), fs))
 
-    display(plot(collect(0: length(green_record_renorm[cutoff:end])-1),acf))
+    taus = 2.0 * cumsum(acf) .- 1.0
 
-    sum_threshold = Int(n_loop-cutoff)
-    ict = 1+2*sum(acf[1:sum_threshold])
-    ref_ict = 5*ict
-
+    window = auto_window(taus, 5.0)
+    return taus[window]
 end

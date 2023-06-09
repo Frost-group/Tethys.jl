@@ -11,20 +11,17 @@ Starting with §3 in [1] - a minimalist bare expansion for the Green function of
 
 ## Inputs
 - Electron-phonon coupling constant, α
-- Chemical potential, μ
 - Electron momentum, *k*
 - Number of MC sweeps
 - Number of diagram updates per sweep
 
 ## Potential Outputs
 Observables:
-- Total Green's function of the polaron
-- Energy
-- Quasi-particle weight
+- Ground State Energy
 - Effective polaron mass
 
-Errors:
-
+## How to run the simulation
+A basic example is given in the *examples* folder - example.jl
 
 ## Packages
 Feynman's variational solution to calculate polaron mobility - https://github.com/jarvist/PolaronMobility.jl

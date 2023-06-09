@@ -1,28 +1,67 @@
 include("Diagram.jl")
 include("update.jl")
-include("measure.jl")
-
+#include("measure.jl")
+#include("zero_update.jl")
+import Tethys
+using Random
 using Logging
 using BenchmarkTools
+using Profile
 
-function insert_arc_benchmark(α, μ, inserts=1, p=0)
+function insert_arc_benchmark(α, μ=-1.5, inserts=1, p=0)
     max_τ=30; max_order=500; mass=1; ω=1;
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
     order=diagram.order
     m=mass
+    m=mass
     α_squared=2pi*α*sqrt(2)
     for i in 1:inserts
         insert_arc!(diagram,order,mass, μ, ω, α_squared)
-        extend!(diagram)
-        order = diagram.order
+        order=diagram.order
+        #swap_arc!(diagram)
+        #scale!(diagram,order,m,μ,ω,1)
+        
+        #extend!(diagram)
+        
     end
+    #remove_arc2!(diagram,order,mass, μ, ω, α_squared)
 end
 
 begin
-    t = @benchmark insert_arc_benchmark(5.0, -6,1)
+    t = @benchmark insert_arc_benchmark(1.0,-1.2,5000)
 end
 
-function extend_benchmark(α, μ, p=0)
+begin
+    @profile insert_arc_benchmark(5.0,-6.0,100)
+    Profile.print(format=:flat)
+end
+
+function full_benchmark(α, diagram, n_loop=1, p=0)
+    max_τ=100.0; max_order=5000;
+    n_hist=100000; sample_freq=2000;
+    estimators = Estimators_Record(max_τ, max_order, sample_freq, n_loop, n_hist)
+    diagram, estimators, variance = simulate!(diagram, estimators, true)
+end
+
+begin
+    α=15.0
+    loop_list = [1500]
+    p=0.0
+    max_τ=100.0; max_order=5000;
+    n_hist=100000; sample_freq=2000;
+    n_loop = loop_list[1]
+    diagram = initialise_diagram(α, p, max_τ, max_order)
+    estimators = Estimators_Record(max_τ, max_order, sample_freq, n_loop, n_hist)
+    diagram, estimators, variance = simulate!(diagram, estimators, true)
+end
+
+begin
+    BenchmarkTools.DEFAULT_PARAMETERS.seconds = 100
+    t = @benchmark full_benchmark(15.0, diagram, 10)
+end
+
+
+function insert_arc_2_benchmark(α, μ, p=0)
     max_τ=30; max_order=500; mass=1; ω=1;
     regime=Diff_more()
     diagram=Diagram(p, max_τ, max_order, mass, μ, ω, α)
