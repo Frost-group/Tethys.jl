@@ -1,5 +1,4 @@
 using Statistics
-using Plots
 using Distributions
 using LinearAlgebra
 using StaticArrays
